@@ -29,21 +29,15 @@ function setLoading(btn, loading = true) {
   btn.textContent = loading ? 'Processing...' : btn.dataset.originalText;
 }
 
-// ====================== NAVBAR SCROLL (auto-hide) ======================
+// ====================== NAVBAR SCROLL HIDE ======================
 let lastScroll = 0;
 window.addEventListener('scroll', () => {
   const navbar = document.getElementById('navbar');
   if (!navbar) return;
   const currentScroll = window.pageYOffset;
-  if (currentScroll <= 0) {
-    navbar.classList.remove('hidden');
-    return;
-  }
-  if (currentScroll > lastScroll && !navbar.classList.contains('hidden')) {
-    navbar.classList.add('hidden');
-  } else if (currentScroll < lastScroll && navbar.classList.contains('hidden')) {
-    navbar.classList.remove('hidden');
-  }
+  if (currentScroll <= 0) navbar.classList.remove('hidden');
+  else if (currentScroll > lastScroll && !navbar.classList.contains('hidden')) navbar.classList.add('hidden');
+  else if (currentScroll < lastScroll && navbar.classList.contains('hidden')) navbar.classList.remove('hidden');
   lastScroll = currentScroll;
 });
 
@@ -58,7 +52,6 @@ function updateNav() {
     navLogout: document.getElementById('navLogout')
   };
   if (!ids.navLogin) return;
-
   if (user) {
     ids.navLogin.style.display = 'none';
     ids.navRegister.style.display = 'none';
@@ -72,7 +65,6 @@ function updateNav() {
     ids.navAdmin.style.display = 'none';
     ids.navLogout.style.display = 'none';
   }
-
   const toggle = document.getElementById('navToggle');
   const links = document.getElementById('navLinks');
   if (toggle) toggle.onclick = () => links.classList.toggle('active');
@@ -105,13 +97,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // Floating WhatsApp button (appears on every page)
-  const whatsappBtn = document.createElement('a');
-  whatsappBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
-  whatsappBtn.target = '_blank';
-  whatsappBtn.className = 'floating-whatsapp';
-  whatsappBtn.innerHTML = '💬';
-  document.body.appendChild(whatsappBtn);
+  // Floating WhatsApp button
+  const waBtn = document.createElement('a');
+  waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
+  waBtn.target = '_blank';
+  waBtn.className = 'floating-whatsapp';
+  waBtn.innerHTML = '💬';
+  document.body.appendChild(waBtn);
 });
 
 // ====================== COURSE CARD (with discount & enrollment) ======================
@@ -228,7 +220,7 @@ function setupLogin() {
     }
   });
 
-  // Add "Forgot Password?" link
+  // Forgot password link
   const forgotLink = document.createElement('a');
   forgotLink.href = '#';
   forgotLink.textContent = 'Forgot Password?';
@@ -252,17 +244,25 @@ function showForgotPasswordModal() {
     <div class="modal-content" style="max-width:400px; padding:25px;">
       <h3 style="margin-bottom:15px;">Reset Password</h3>
       <input type="email" id="forgotEmail" placeholder="Your registered email" required style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
-      <button class="btn btn-primary btn-full" id="sendResetLink">Send Reset Link</button>
+      <button class="btn btn-primary btn-full" id="sendForgotOtp">Send OTP</button>
+      <div id="forgotOtpSection" style="display:none; margin-top:15px;">
+        <input type="text" id="forgotOtp" placeholder="Enter OTP" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
+        <button class="btn btn-outline btn-full" id="verifyForgotOtp">Verify OTP</button>
+        <div id="newPasswordSection" style="display:none; margin-top:10px;">
+          <input type="password" id="newPassword" placeholder="New password" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
+          <button class="btn btn-primary btn-full" id="resetPasswordBtn">Reset Password</button>
+        </div>
+      </div>
       <button class="btn btn-outline btn-full" id="closeForgotModal" style="margin-top:10px;">Cancel</button>
     </div>
   `;
   document.body.appendChild(modal);
 
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
-  document.getElementById('sendResetLink').addEventListener('click', async () => {
+  document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     if (!email) return showToast('Please enter your email', 'error');
-    const btn = document.getElementById('sendResetLink');
+    const btn = document.getElementById('sendForgotOtp');
     setLoading(btn, true);
     try {
       const res = await fetch(`${API_BASE}/auth/forgot-password`, {
@@ -271,9 +271,65 @@ function showForgotPasswordModal() {
         body: JSON.stringify({ email })
       });
       const data = await res.json();
-      if (res.ok) showToast(data.message, 'success');
-      else showToast(data.message, 'error');
-      modal.remove();
+      if (res.ok) {
+        showToast(data.message, 'success');
+        document.getElementById('forgotOtpSection').style.display = 'block';
+      } else {
+        showToast(data.message, 'error');
+      }
+    } catch {
+      showToast('Network error', 'error');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
+    const email = document.getElementById('forgotEmail').value.trim();
+    const otp = document.getElementById('forgotOtp').value.trim();
+    if (!otp) return showToast('Enter OTP', 'error');
+    const btn = document.getElementById('verifyForgotOtp');
+    setLoading(btn, true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('OTP verified!', 'success');
+        document.getElementById('newPasswordSection').style.display = 'block';
+      } else {
+        showToast(data.message, 'error');
+      }
+    } catch {
+      showToast('Network error', 'error');
+    } finally {
+      setLoading(btn, false);
+    }
+  });
+
+  document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
+    const email = document.getElementById('forgotEmail').value.trim();
+    const otp = document.getElementById('forgotOtp').value.trim();
+    const newPassword = document.getElementById('newPassword').value;
+    if (!newPassword) return showToast('Enter new password', 'error');
+    const btn = document.getElementById('resetPasswordBtn');
+    setLoading(btn, true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Password reset! Please login.', 'success');
+        modal.remove();
+      } else {
+        showToast(data.message, 'error');
+      }
     } catch {
       showToast('Network error', 'error');
     } finally {
@@ -383,7 +439,6 @@ function setupDashboard() {
   const sidebar = document.getElementById('sidebar');
   const toggleBtn = document.getElementById('sidebarToggle');
 
-  // Add close button to sidebar if not present
   if (!sidebar.querySelector('.close-sidebar')) {
     const closeBtn = document.createElement('button');
     closeBtn.className = 'close-sidebar';
@@ -440,8 +495,6 @@ async function loadMyCourses() {
 }
 
 async function viewContent(courseId) {
-  const btn = document.querySelector(`.view-content-btn[data-id="${courseId}"]`);
-  if (btn) setLoading(btn, true);
   try {
     const res = await fetch(`${API_BASE}/courses/${courseId}`);
     const course = await res.json();
@@ -450,10 +503,14 @@ async function viewContent(courseId) {
       html += course.lectures.map((l, i) => `
         <div style="margin-bottom:30px; background:white; padding:20px; border-radius:16px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
           <h3>${i + 1}. ${l.title}</h3>
+          ${l.thumbnail ? `<img src="${l.thumbnail}" style="width:100%; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:10px;">` : ''}
           <div style="position:relative; padding-bottom:56.25%; height:0; margin:15px 0;">
             <iframe src="${l.videoUrl}" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allowfullscreen></iframe>
           </div>
-          <a href="${l.notesUrl}" target="_blank" class="btn btn-outline">📄 Download Notes</a>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="${l.notesUrl}" target="_blank" class="btn btn-outline">📄 Notes</a>
+            ${l.dppLink ? `<a href="${l.dppLink}" target="_blank" class="btn btn-outline">📝 DPP</a>` : ''}
+          </div>
         </div>
       `).join('');
     } else {
@@ -462,8 +519,6 @@ async function viewContent(courseId) {
     document.getElementById('dashboardContent').innerHTML = html;
   } catch {
     showToast('Failed to load course content', 'error');
-  } finally {
-    if (btn) setLoading(btn, false);
   }
 }
 
@@ -528,6 +583,7 @@ function initAdmin() {
       const view = link.dataset.view;
       if (view === 'adminDashboard') adminStats();
       else if (view === 'adminCourses') adminManageCourses();
+      else if (view === 'adminLectures') adminLectureManager();
       else if (view === 'adminStudents') adminStudentList();
       else if (view === 'adminAssign') adminAssignCourse();
     });
@@ -552,7 +608,7 @@ async function adminStats() {
   }
 }
 
-// ------------- ADMIN - COURSE MANAGEMENT (with edit modal) -------------
+// ---------- ADMIN - COURSE MANAGEMENT ----------
 async function adminManageCourses() {
   let html = `
     <h3>Add New Course</h3>
@@ -609,37 +665,20 @@ async function loadCourseList() {
         <img src="${c.imageUrl}" style="height:120px; object-fit:cover; border-radius:8px;">
         <h3>${c.title}</h3>
         <p>${c.description}</p>
-        <div class="price-container">
-          <span class="price">₹${c.price}</span>
-          ${c.originalPrice && c.originalPrice > c.price ? `<span class="original-price">₹${c.originalPrice}</span>` : ''}
-        </div>
-        <div style="display:flex; gap:5px; margin-top:10px;">
-          <button class="btn btn-outline edit-course-btn" data-id="${c._id}">Edit</button>
-          <button class="btn btn-danger delete-course-btn" data-id="${c._id}">Delete</button>
-        </div>
+        <div>₹${c.price} ${c.originalPrice ? `<span class="original-price">₹${c.originalPrice}</span>` : ''}</div>
+        <button class="btn btn-danger delete-course-btn" data-id="${c._id}">Delete</button>
       </div>
     `).join('');
 
     document.querySelectorAll('.delete-course-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (!confirm('Delete this course?')) return;
-        setLoading(btn, true);
         await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, {
           method: 'DELETE',
           headers: authHeaders()
         });
         showToast('Course deleted', 'info');
         loadCourseList();
-        setLoading(btn, false);
-      });
-    });
-
-    document.querySelectorAll('.edit-course-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const courseId = btn.dataset.id;
-        const res = await fetch(`${API_BASE}/courses/${courseId}`);
-        const course = await res.json();
-        showEditCourseModal(course);
       });
     });
   } catch {
@@ -647,119 +686,114 @@ async function loadCourseList() {
   }
 }
 
-function showEditCourseModal(course) {
+// ---------- ADMIN - LECTURE MANAGER ----------
+async function adminLectureManager() {
+  // Fetch courses for the dropdown
+  const res = await fetch(`${API_BASE}/courses`);
+  const courses = await res.json();
+
   let html = `
-    <div class="modal-overlay" id="editCourseModal">
-      <div class="modal-content" style="max-width:700px;">
-        <h2>Edit Course</h2>
-        <form id="editCourseForm" style="display:flex; flex-direction:column; gap:10px;">
-          <input type="text" id="editTitle" value="${course.title}" required>
-          <input type="text" id="editDesc" value="${course.description}" required>
-          <input type="number" id="editPrice" value="${course.price}" required>
-          <input type="number" id="editOriginalPrice" value="${course.originalPrice || ''}" placeholder="Original Price (optional)">
-          <input type="text" id="editImageUrl" value="${course.imageUrl}">
-          <button type="submit" class="btn btn-primary">Save Changes</button>
-        </form>
-        <h3 style="margin-top:30px;">Lectures</h3>
-        <div id="lectureList">
-          ${course.lectures.map(l => `
-            <div class="lecture-item" style="padding:10px; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:5px;">
-              <strong>${l.title}</strong><br>
-              Video: ${l.videoUrl}<br>
-              Notes: ${l.notesUrl}
-              <button class="btn btn-danger delete-lecture-btn" data-lecture-id="${l._id}">Remove</button>
-            </div>
-          `).join('')}
-        </div>
-        <h4>Add Lecture</h4>
-        <form id="addLectureForm" style="display:flex; gap:10px; flex-wrap:wrap;">
-          <input type="text" id="lecTitle" placeholder="Title" required>
-          <input type="text" id="lecVideo" placeholder="YouTube Embed URL" required>
-          <input type="text" id="lecNotes" placeholder="Google Drive Notes Link" required>
-          <button type="submit" class="btn btn-outline">Add Lecture</button>
-        </form>
-        <button class="btn btn-secondary btn-full" id="closeModal" style="margin-top:15px;">Close</button>
-      </div>
+    <h3>Manage Lectures</h3>
+    <div class="form-group">
+      <label>Select Course</label>
+      <select id="lectureCourseSelect" style="width:100%; padding:10px;">
+        ${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}
+      </select>
     </div>
+    <div id="lectureManagerPanel"></div>
   `;
+  document.getElementById('adminContent').innerHTML = html;
 
-  document.getElementById('adminContent').insertAdjacentHTML('beforeend', html);
+  const select = document.getElementById('lectureCourseSelect');
+  const panel = document.getElementById('lectureManagerPanel');
 
-  // Edit course form
-  document.getElementById('editCourseForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('editTitle').value;
-    const description = document.getElementById('editDesc').value;
-    const price = Number(document.getElementById('editPrice').value);
-    const originalPrice = document.getElementById('editOriginalPrice').value
-      ? Number(document.getElementById('editOriginalPrice').value)
-      : null;
-    const imageUrl = document.getElementById('editImageUrl').value;
+  async function refreshLectures() {
+    const courseId = select.value;
+    try {
+      const res = await fetch(`${API_BASE}/admin/lectures/${courseId}`, { headers: authHeaders() });
+      const lectures = await res.json();
+      panel.innerHTML = `
+        <h4>Current Lectures</h4>
+        ${lectures.map(l => `
+          <div class="lecture-item" style="border:1px solid #e2e8f0; padding:15px; margin-bottom:10px; border-radius:8px;">
+            <strong>${l.title}</strong><br>
+            Video: ${l.videoUrl}<br>
+            Notes: ${l.notesUrl}<br>
+            DPP: ${l.dppLink || '—'}<br>
+            Thumbnail: ${l.thumbnail ? `<img src="${l.thumbnail}" style="max-height:80px; border-radius:6px;">` : '—'}
+            <button class="btn btn-danger delete-lecture-btn" data-id="${l._id}">Remove</button>
+          </div>
+        `).join('')}
+        <h4 style="margin-top:25px;">Add New Lecture</h4>
+        <form id="addLectureForm">
+          <input type="text" id="lecTitle" placeholder="Lecture Topic" required style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
+          <input type="text" id="lecVideo" placeholder="YouTube Embed URL" required style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
+          <input type="text" id="lecNotes" placeholder="Notes Link (Google Drive)" required style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
+          <input type="text" id="lecDpp" placeholder="DPP Link (optional)" style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
+          <input type="text" id="lecThumbnail" placeholder="Thumbnail URL (optional)" style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
+          <button type="submit" class="btn btn-primary">Add Lecture</button>
+        </form>
+      `;
 
-    // Keep existing lectures
-    const lectures = course.lectures;
-
-    await fetch(`${API_BASE}/admin/courses/${course._id}`, {
-      method: 'PUT',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description, price, originalPrice, imageUrl, lectures })
-    });
-    showToast('Course updated', 'success');
-    document.getElementById('editCourseModal').remove();
-    loadCourseList();
-  });
-
-  // Delete lecture
-  document.querySelectorAll('.delete-lecture-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const lectureId = btn.dataset.lectureId;
-      await fetch(`${API_BASE}/admin/courses/${course._id}/lectures/${lectureId}`, {
-        method: 'DELETE',
-        headers: authHeaders()
+      // Delete lecture handler
+      document.querySelectorAll('.delete-lecture-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this lecture?')) return;
+          await fetch(`${API_BASE}/admin/lectures/${courseId}/${btn.dataset.id}`, {
+            method: 'DELETE',
+            headers: authHeaders()
+          });
+          refreshLectures();
+          showToast('Lecture removed', 'info');
+        });
       });
-      const updated = await fetch(`${API_BASE}/courses/${course._id}`).then(r => r.json());
-      document.getElementById('editCourseModal').remove();
-      showEditCourseModal(updated);
-    });
-  });
 
-  // Add lecture
-  document.getElementById('addLectureForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('lecTitle').value;
-    const videoUrl = document.getElementById('lecVideo').value;
-    const notesUrl = document.getElementById('lecNotes').value;
-    await fetch(`${API_BASE}/admin/courses/${course._id}/lectures`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, videoUrl, notesUrl })
-    });
-    showToast('Lecture added', 'success');
-    const updated = await fetch(`${API_BASE}/courses/${course._id}`).then(r => r.json());
-    document.getElementById('editCourseModal').remove();
-    showEditCourseModal(updated);
-  });
+      // Add lecture form handler
+      document.getElementById('addLectureForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const body = {
+          title: document.getElementById('lecTitle').value,
+          videoUrl: document.getElementById('lecVideo').value,
+          notesUrl: document.getElementById('lecNotes').value,
+          dppLink: document.getElementById('lecDpp').value,
+          thumbnail: document.getElementById('lecThumbnail').value
+        };
+        await fetch(`${API_BASE}/admin/lectures/${courseId}`, {
+          method: 'POST',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        refreshLectures();
+        showToast('Lecture added successfully', 'success');
+      });
+    } catch {
+      panel.innerHTML = '<p>Error loading lectures.</p>';
+    }
+  }
 
-  document.getElementById('closeModal').addEventListener('click', () => {
-    document.getElementById('editCourseModal').remove();
-  });
+  select.addEventListener('change', refreshLectures);
+  refreshLectures(); // initial load
 }
 
+// ---------- ADMIN - STUDENT LIST ----------
 async function adminStudentList() {
   try {
     const res = await fetch(`${API_BASE}/admin/students`, { headers: authHeaders() });
     const students = await res.json();
-    document.getElementById('adminContent').innerHTML = students.length ? `
-      <table style="width:100%; background:white; border-collapse:collapse; border-radius:12px; overflow:hidden;">
-        <thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead>
-        <tbody>${students.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td></tr>`).join('')}</tbody>
-      </table>
-    ` : '<p>No students registered.</p>';
+    document.getElementById('adminContent').innerHTML = students.length
+      ? `
+        <table style="width:100%; background:white; border-collapse:collapse; border-radius:12px; overflow:hidden;">
+          <thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead>
+          <tbody>${students.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td></tr>`).join('')}</tbody>
+        </table>
+      `
+      : '<p>No students registered.</p>';
   } catch {
     showToast('Error loading students', 'error');
   }
 }
 
+// ---------- ADMIN - ASSIGN COURSE (with search) ----------
 async function adminAssignCourse() {
   try {
     const [usersRes, coursesRes] = await Promise.all([
@@ -768,21 +802,36 @@ async function adminAssignCourse() {
     ]);
     const users = await usersRes.json();
     const courses = await coursesRes.json();
+
     document.getElementById('adminContent').innerHTML = `
-      <form id="assignForm" style="background:white; padding:30px; border-radius:12px; max-width:500px;">
-        <div class="form-group">
-          <label>Select Student</label>
-          <select id="assignStudent" required>${users.map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`).join('')}</select>
-        </div>
-        <div class="form-group">
-          <label>Select Course</label>
-          <select id="assignCourse" required>${courses.map(c => `<option value="${c._id}">${c.title} - ₹${c.price}</option>`).join('')}</select>
-        </div>
-        <button type="submit" class="btn btn-primary btn-full">Assign Course</button>
-      </form>
+      <h3>Assign Course to Student</h3>
+      <input type="text" id="studentSearch" placeholder="🔍 Search by name or email" style="width:100%; padding:12px; margin-bottom:20px; border-radius:10px; border:1px solid #ddd;">
+      <div class="form-group">
+        <label>Select Student</label>
+        <select id="assignStudent" required style="width:100%; padding:10px;">
+          ${users.map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Select Course</label>
+        <select id="assignCourse" required style="width:100%; padding:10px;">
+          ${courses.map(c => `<option value="${c._id}">${c.title} - ₹${c.price}</option>`).join('')}
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" id="assignBtn">Assign Course</button>
     `;
-    document.getElementById('assignForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+
+    // Real-time search
+    document.getElementById('studentSearch').addEventListener('input', (e) => {
+      const term = e.target.value.toLowerCase();
+      const select = document.getElementById('assignStudent');
+      select.innerHTML = users
+        .filter(u => u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term))
+        .map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`)
+        .join('');
+    });
+
+    document.getElementById('assignBtn').addEventListener('click', async () => {
       const userEmail = document.getElementById('assignStudent').value;
       const courseId = document.getElementById('assignCourse').value;
       const res = await fetch(`${API_BASE}/admin/assign`, {
@@ -791,7 +840,7 @@ async function adminAssignCourse() {
         body: JSON.stringify({ userEmail, courseId })
       });
       const data = await res.json();
-      if (res.ok) showToast('Course assigned!', 'success');
+      if (res.ok) showToast('Course assigned successfully!', 'success');
       else showToast(data.message, 'error');
     });
   } catch {
