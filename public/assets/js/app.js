@@ -77,7 +77,6 @@ window.handleLogout = () => {
   showToast('Logged out successfully', 'success');
   window.location.href = 'index.html';
 };
-
 window.handleAdminLogout = () => {
   localStorage.removeItem('adminToken');
   showToast('Admin logged out', 'info');
@@ -97,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // Floating WhatsApp button
+  // Floating WhatsApp
   const waBtn = document.createElement('a');
   waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
   waBtn.target = '_blank';
@@ -107,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ====================== COURSE CARD (with discount & enrollment) ======================
-function cardHTML(course) {
+function cardHTML(course, showViewContentBtn = false) {
   const disc = course.originalPrice && course.originalPrice > course.price
     ? `<span class="original-price">₹${course.originalPrice}</span>
        <span class="discount-badge">${Math.round((1 - course.price / course.originalPrice) * 100)}% off</span>`
@@ -115,6 +114,9 @@ function cardHTML(course) {
   const enrolled = course.enrollmentCount
     ? `👥 ${course.enrollmentCount} students enrolled`
     : '👥 Be the first to enroll';
+  const actionBtn = showViewContentBtn
+    ? `<button class="btn btn-outline view-content-btn" data-id="${course._id}">View Content</button>`
+    : `<a href="course-detail.html?id=${course._id}" class="btn btn-primary btn-full">View Details</a>`;
   return `
     <div class="course-card">
       <img src="${course.imageUrl}" alt="${course.title}" style="width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:12px;">
@@ -125,7 +127,7 @@ function cardHTML(course) {
         ${disc}
       </div>
       <div class="enrollment-count">${enrolled}</div>
-      <a href="course-detail.html?id=${course._id}" class="btn btn-primary btn-full">View Details</a>
+      ${actionBtn}
     </div>
   `;
 }
@@ -176,11 +178,7 @@ async function loadDetail() {
     `;
     document.getElementById('buyNowBtn').addEventListener('click', () => {
       const user = getCurrentUser();
-      if (!user) {
-        showToast('Please login to purchase', 'error');
-        window.location.href = 'login.html';
-        return;
-      }
+      if (!user) { showToast('Please login first', 'error'); location.href='login.html'; return; }
       const msg = `Hello Admin,\nName: ${user.name}\nEmail: ${user.email}\nCourse: ${course.title}`;
       window.open(`https://wa.me/+918055698328?text=${encodeURIComponent(msg)}`, '_blank');
     });
@@ -191,7 +189,6 @@ async function loadDetail() {
 function setupLogin() {
   const form = document.getElementById('loginForm');
   if (!form) return;
-
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = form.querySelector('button[type="submit"]');
@@ -199,42 +196,24 @@ function setupLogin() {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const res = await fetch(`${API_BASE}/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         showToast('Login successful!', 'success');
-        window.location.href = 'dashboard.html';
-      } else {
-        showToast(data.message || 'Login failed', 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(btn, false);
-    }
+        location.href = 'dashboard.html';
+      } else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(btn, false); }
   });
 
-  // Forgot password link
   const forgotLink = document.createElement('a');
-  forgotLink.href = '#';
-  forgotLink.textContent = 'Forgot Password?';
-  forgotLink.style.display = 'block';
-  forgotLink.style.marginTop = '15px';
-  forgotLink.style.textAlign = 'center';
-  forgotLink.style.color = '#2563eb';
-  forgotLink.style.cursor = 'pointer';
+  forgotLink.href = '#'; forgotLink.textContent = 'Forgot Password?';
+  forgotLink.style.display='block'; forgotLink.style.margin='15px 0'; forgotLink.style.textAlign='center';
+  forgotLink.style.color='#4f46e5'; forgotLink.style.cursor='pointer';
   form.appendChild(forgotLink);
-
-  forgotLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    showForgotPasswordModal();
-  });
+  forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgotPasswordModal(); });
 }
 
 function showForgotPasswordModal() {
@@ -242,8 +221,8 @@ function showForgotPasswordModal() {
   modal.className = 'modal-overlay';
   modal.innerHTML = `
     <div class="modal-content" style="max-width:400px; padding:25px;">
-      <h3 style="margin-bottom:15px;">Reset Password</h3>
-      <input type="email" id="forgotEmail" placeholder="Your registered email" required style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
+      <h3>Reset Password</h3>
+      <input type="email" id="forgotEmail" placeholder="Your email" required style="width:100%; margin:10px 0; padding:10px; border-radius:8px; border:1px solid #ddd;">
       <button class="btn btn-primary btn-full" id="sendForgotOtp">Send OTP</button>
       <div id="forgotOtpSection" style="display:none; margin-top:15px;">
         <input type="text" id="forgotOtp" placeholder="Enter OTP" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
@@ -254,191 +233,114 @@ function showForgotPasswordModal() {
         </div>
       </div>
       <button class="btn btn-outline btn-full" id="closeForgotModal" style="margin-top:10px;">Cancel</button>
-    </div>
-  `;
+    </div>`;
   document.body.appendChild(modal);
-
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
   document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
-    if (!email) return showToast('Please enter your email', 'error');
-    const btn = document.getElementById('sendForgotOtp');
-    setLoading(btn, true);
+    if (!email) return showToast('Enter email', 'error');
+    setLoading(document.getElementById('sendForgotOtp'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
       const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, 'success');
-        document.getElementById('forgotOtpSection').style.display = 'block';
-      } else {
-        showToast(data.message, 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(btn, false);
-    }
+      if (res.ok) { showToast(data.message, 'success'); document.getElementById('forgotOtpSection').style.display='block'; }
+      else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(document.getElementById('sendForgotOtp'), false); }
   });
-
   document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
     if (!otp) return showToast('Enter OTP', 'error');
-    const btn = document.getElementById('verifyForgotOtp');
-    setLoading(btn, true);
+    setLoading(document.getElementById('verifyForgotOtp'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
-      });
+      const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, otp }) });
       const data = await res.json();
-      if (res.ok) {
-        showToast('OTP verified!', 'success');
-        document.getElementById('newPasswordSection').style.display = 'block';
-      } else {
-        showToast(data.message, 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(btn, false);
-    }
+      if (res.ok) { showToast('OTP verified!', 'success'); document.getElementById('newPasswordSection').style.display='block'; }
+      else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(document.getElementById('verifyForgotOtp'), false); }
   });
-
   document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
     const newPassword = document.getElementById('newPassword').value;
     if (!newPassword) return showToast('Enter new password', 'error');
-    const btn = document.getElementById('resetPasswordBtn');
-    setLoading(btn, true);
+    setLoading(document.getElementById('resetPasswordBtn'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp, newPassword })
-      });
+      const res = await fetch(`${API_BASE}/auth/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, otp, newPassword }) });
       const data = await res.json();
-      if (res.ok) {
-        showToast('Password reset! Please login.', 'success');
-        modal.remove();
-      } else {
-        showToast(data.message, 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(btn, false);
-    }
+      if (res.ok) { showToast('Password reset! Please login.', 'success'); modal.remove(); }
+      else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(document.getElementById('resetPasswordBtn'), false); }
   });
 }
 
-// ====================== REGISTER (with OTP) ======================
+// ====================== REGISTER ======================
 function setupRegister() {
   let otpVerified = false;
   const sendBtn = document.getElementById('sendOtpBtn');
   const verifyBtn = document.getElementById('verifyOtpBtn');
-  const registerForm = document.getElementById('registerForm');
-  const registerBtn = document.getElementById('registerBtn');
-
-  if (!sendBtn || !verifyBtn || !registerForm) return;
-
+  const regForm = document.getElementById('registerForm');
+  const regBtn = document.getElementById('registerBtn');
+  if (!sendBtn || !verifyBtn || !regForm) return;
   sendBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value.trim();
     if (!email) return showToast('Enter email first', 'error');
     setLoading(sendBtn, true);
     try {
-      const res = await fetch(`${API_BASE}/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
+      const res = await fetch(`${API_BASE}/auth/send-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
       const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, 'success');
-        document.getElementById('otpSection').style.display = 'block';
-      } else {
-        showToast(data.message, 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(sendBtn, false);
-    }
+      if (res.ok) { showToast(data.message, 'success'); document.getElementById('otpSection').style.display='block'; }
+      else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(sendBtn, false); }
   });
-
   verifyBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value.trim();
     const otp = document.getElementById('otp').value.trim();
     if (!otp) return showToast('Enter OTP', 'error');
     setLoading(verifyBtn, true);
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
-      });
+      const res = await fetch(`${API_BASE}/auth/verify-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, otp }) });
       const data = await res.json();
-      if (res.ok) {
-        otpVerified = true;
-        showToast('OTP verified!', 'success');
-        registerBtn.disabled = false;
-      } else {
-        showToast(data.message, 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(verifyBtn, false);
-    }
+      if (res.ok) { otpVerified = true; showToast('OTP verified!', 'success'); regBtn.disabled = false; }
+      else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(verifyBtn, false); }
   });
-
-  registerForm.addEventListener('submit', async (e) => {
+  regForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!otpVerified) return showToast('Please verify OTP first', 'error');
-    setLoading(registerBtn, true);
+    if (!otpVerified) return showToast('Verify OTP first', 'error');
+    setLoading(regBtn, true);
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const password = document.getElementById('password').value;
     const otp = document.getElementById('otp').value.trim();
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password, otp })
-      });
+      const res = await fetch(`${API_BASE}/auth/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, email, phone, password, otp }) });
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('currentUser', JSON.stringify(data.user));
-        showToast('Registration successful!', 'success');
-        window.location.href = 'dashboard.html';
-      } else {
-        showToast(data.message, 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(registerBtn, false);
-    }
+        showToast('Registered!', 'success');
+        location.href = 'dashboard.html';
+      } else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(regBtn, false); }
   });
 }
 
 // ====================== STUDENT DASHBOARD ======================
 function setupDashboard() {
   const user = getCurrentUser();
-  if (!user) { window.location.href = 'login.html'; return; }
+  if (!user) { location.href = 'login.html'; return; }
   document.getElementById('topbarUser').textContent = user.name;
 
   const sidebar = document.getElementById('sidebar');
   const toggleBtn = document.getElementById('sidebarToggle');
-
   if (!sidebar.querySelector('.close-sidebar')) {
     const closeBtn = document.createElement('button');
     closeBtn.className = 'close-sidebar';
@@ -446,7 +348,6 @@ function setupDashboard() {
     closeBtn.onclick = () => sidebar.classList.remove('active');
     sidebar.prepend(closeBtn);
   }
-
   toggleBtn.onclick = () => sidebar.classList.toggle('active');
 
   document.querySelectorAll('.sidebar-link').forEach(link => {
@@ -466,26 +367,25 @@ function setupDashboard() {
 async function loadDashboardHome() {
   try {
     const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Failed');
     const courses = await res.json();
     const count = Array.isArray(courses) ? courses.length : 0;
-    document.getElementById('dashboardContent').innerHTML = `
-      <h2>Welcome, ${getCurrentUser().name}!</h2>
-      <p>You are enrolled in <strong>${count}</strong> course(s).</p>
-    `;
+    document.getElementById('dashboardContent').innerHTML = `<h2>Welcome, ${getCurrentUser().name}!</h2><p>Enrolled in <strong>${count}</strong> course(s).</p>`;
   } catch {
-    document.getElementById('dashboardContent').innerHTML = '<p>Error loading data.</p>';
+    document.getElementById('dashboardContent').innerHTML = '<p>Error loading dashboard.</p>';
   }
 }
 
 async function loadMyCourses() {
   try {
     const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
+    if (!res.ok) throw new Error('Failed');
     const courses = await res.json();
     const html = Array.isArray(courses) && courses.length
-      ? courses.map(c => cardHTML(c)).join('')
+      ? courses.map(c => cardHTML(c, true)).join('')   // <-- show View Content button
       : '<p>No enrolled courses yet.</p>';
     document.getElementById('dashboardContent').innerHTML = html;
-    // Re-attach event listeners for view content buttons
+    // Attach click handlers
     document.querySelectorAll('.view-content-btn').forEach(btn => {
       btn.addEventListener('click', () => viewContent(btn.dataset.id));
     });
@@ -497,12 +397,13 @@ async function loadMyCourses() {
 async function viewContent(courseId) {
   try {
     const res = await fetch(`${API_BASE}/courses/${courseId}`);
+    if (!res.ok) throw new Error('Failed');
     const course = await res.json();
     let html = `<h2>${course.title}</h2>`;
     if (course.lectures && course.lectures.length) {
       html += course.lectures.map((l, i) => `
         <div style="margin-bottom:30px; background:white; padding:20px; border-radius:16px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
-          <h3>${i + 1}. ${l.title}</h3>
+          <h3>${i+1}. ${l.title}</h3>
           ${l.thumbnail ? `<img src="${l.thumbnail}" style="width:100%; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:10px;">` : ''}
           <div style="position:relative; padding-bottom:56.25%; height:0; margin:15px 0;">
             <iframe src="${l.videoUrl}" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allowfullscreen></iframe>
@@ -511,10 +412,9 @@ async function viewContent(courseId) {
             <a href="${l.notesUrl}" target="_blank" class="btn btn-outline">📄 Notes</a>
             ${l.dppLink ? `<a href="${l.dppLink}" target="_blank" class="btn btn-outline">📝 DPP</a>` : ''}
           </div>
-        </div>
-      `).join('');
+        </div>`).join('');
     } else {
-      html += '<p>No lectures available for this course.</p>';
+      html += '<p>No lectures available.</p>';
     }
     document.getElementById('dashboardContent').innerHTML = html;
   } catch {
@@ -524,13 +424,11 @@ async function viewContent(courseId) {
 
 // ====================== ADMIN PANEL ======================
 function setupAdmin() {
-  // If already logged in
   if (localStorage.getItem('adminToken')) {
     document.getElementById('adminLoginOverlay').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'flex';
     initAdmin();
   }
-
   document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector('button[type="submit"]');
@@ -538,11 +436,7 @@ function setupAdmin() {
     const email = document.getElementById('adminEmail').value.trim();
     const password = document.getElementById('adminPassword').value;
     try {
-      const res = await fetch(`${API_BASE}/auth/admin-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const res = await fetch(`${API_BASE}/auth/admin-login`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('adminToken', data.token);
@@ -550,21 +444,15 @@ function setupAdmin() {
         document.getElementById('adminPanel').style.display = 'flex';
         initAdmin();
         showToast('Welcome Admin!', 'success');
-      } else {
-        showToast(data.message, 'error');
-      }
-    } catch {
-      showToast('Network error', 'error');
-    } finally {
-      setLoading(btn, false);
-    }
+      } else showToast(data.message, 'error');
+    } catch { showToast('Network error', 'error'); }
+    finally { setLoading(btn, false); }
   });
 }
 
 function initAdmin() {
   const sidebar = document.getElementById('adminSidebar');
   const toggleBtn = document.getElementById('adminSidebarToggle');
-
   if (!sidebar.querySelector('.close-sidebar')) {
     const closeBtn = document.createElement('button');
     closeBtn.className = 'close-sidebar';
@@ -572,7 +460,6 @@ function initAdmin() {
     closeBtn.onclick = () => sidebar.classList.remove('active');
     sidebar.prepend(closeBtn);
   }
-
   toggleBtn.onclick = () => sidebar.classList.toggle('active');
 
   document.querySelectorAll('#adminPanel .sidebar-link').forEach(link => {
@@ -588,7 +475,6 @@ function initAdmin() {
       else if (view === 'adminAssign') adminAssignCourse();
     });
   });
-
   adminStats();
 }
 
@@ -598,59 +484,41 @@ async function adminStats() {
     const { totalCourses, totalStudents, totalEnrollments } = await res.json();
     document.getElementById('adminContent').innerHTML = `
       <div class="features-grid">
-        <div class="feature-card"><h3>Total Courses</h3><p style="font-size:2rem;">${totalCourses}</p></div>
-        <div class="feature-card"><h3>Total Students</h3><p style="font-size:2rem;">${totalStudents}</p></div>
+        <div class="feature-card"><h3>Courses</h3><p style="font-size:2rem;">${totalCourses}</p></div>
+        <div class="feature-card"><h3>Students</h3><p style="font-size:2rem;">${totalStudents}</p></div>
         <div class="feature-card"><h3>Enrollments</h3><p style="font-size:2rem;">${totalEnrollments}</p></div>
-      </div>
-    `;
-  } catch {
-    showToast('Error loading stats', 'error');
-  }
+      </div>`;
+  } catch { showToast('Error loading stats', 'error'); }
 }
 
 // ---------- ADMIN - COURSE MANAGEMENT ----------
 async function adminManageCourses() {
   let html = `
-    <h3>Add New Course</h3>
+    <h3>Add Course</h3>
     <form id="addCourseForm" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
-      <input type="text" id="title" placeholder="Course Title" required>
+      <input type="text" id="title" placeholder="Title" required>
       <input type="text" id="desc" placeholder="Description" required>
       <input type="number" id="price" placeholder="Selling Price" required>
-      <input type="number" id="originalPrice" placeholder="Original Price (optional)">
+      <input type="number" id="originalPrice" placeholder="Original Price">
       <input type="text" id="imageUrl" placeholder="Image URL" value="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600">
-      <button type="submit" class="btn btn-primary">Add Course</button>
+      <button type="submit" class="btn btn-primary">Add</button>
     </form>
-    <div id="courseList"></div>
-  `;
+    <div id="courseList"></div>`;
   document.getElementById('adminContent').innerHTML = html;
-
   document.getElementById('addCourseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    setLoading(btn, true);
+    const btn = e.target.querySelector('button[type="submit"]'); setLoading(btn, true);
     const title = document.getElementById('title').value;
     const description = document.getElementById('desc').value;
     const price = Number(document.getElementById('price').value);
-    const originalPrice = document.getElementById('originalPrice').value
-      ? Number(document.getElementById('originalPrice').value)
-      : null;
+    const originalPrice = document.getElementById('originalPrice').value ? Number(document.getElementById('originalPrice').value) : null;
     const imageUrl = document.getElementById('imageUrl').value;
     try {
-      await fetch(`${API_BASE}/admin/courses`, {
-        method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, price, originalPrice, imageUrl, lectures: [] })
-      });
-      showToast('Course added!', 'success');
-      loadCourseList();
-      e.target.reset();
-    } catch {
-      showToast('Failed to add course', 'error');
-    } finally {
-      setLoading(btn, false);
-    }
+      await fetch(`${API_BASE}/admin/courses`, { method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'}, body: JSON.stringify({title,description,price,originalPrice,imageUrl,lectures:[]}) });
+      showToast('Course added!', 'success'); loadCourseList();
+    } catch { showToast('Failed', 'error'); }
+    finally { setLoading(btn, false); }
   });
-
   loadCourseList();
 }
 
@@ -667,88 +535,55 @@ async function loadCourseList() {
         <p>${c.description}</p>
         <div>₹${c.price} ${c.originalPrice ? `<span class="original-price">₹${c.originalPrice}</span>` : ''}</div>
         <button class="btn btn-danger delete-course-btn" data-id="${c._id}">Delete</button>
-      </div>
-    `).join('');
-
+      </div>`).join('');
     document.querySelectorAll('.delete-course-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('Delete this course?')) return;
-        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, {
-          method: 'DELETE',
-          headers: authHeaders()
-        });
-        showToast('Course deleted', 'info');
+        if (!confirm('Delete?')) return;
+        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method:'DELETE', headers: authHeaders() });
+        showToast('Deleted', 'info');
         loadCourseList();
       });
     });
-  } catch {
-    list.innerHTML = '<p>Error loading courses.</p>';
-  }
+  } catch { list.innerHTML = '<p>Error.</p>'; }
 }
 
 // ---------- ADMIN - LECTURE MANAGER ----------
 async function adminLectureManager() {
-  // Fetch courses for the dropdown
   const res = await fetch(`${API_BASE}/courses`);
   const courses = await res.json();
-
   let html = `
     <h3>Manage Lectures</h3>
-    <div class="form-group">
-      <label>Select Course</label>
-      <select id="lectureCourseSelect" style="width:100%; padding:10px;">
-        ${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}
-      </select>
-    </div>
-    <div id="lectureManagerPanel"></div>
-  `;
+    <select id="lectureCourseSelect">${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}</select>
+    <div id="lectureManagerPanel"></div>`;
   document.getElementById('adminContent').innerHTML = html;
-
   const select = document.getElementById('lectureCourseSelect');
   const panel = document.getElementById('lectureManagerPanel');
-
-  async function refreshLectures() {
+  async function refresh() {
     const courseId = select.value;
     try {
       const res = await fetch(`${API_BASE}/admin/lectures/${courseId}`, { headers: authHeaders() });
       const lectures = await res.json();
       panel.innerHTML = `
-        <h4>Current Lectures</h4>
+        <h4>Lectures</h4>
         ${lectures.map(l => `
-          <div class="lecture-item" style="border:1px solid #e2e8f0; padding:15px; margin-bottom:10px; border-radius:8px;">
-            <strong>${l.title}</strong><br>
-            Video: ${l.videoUrl}<br>
-            Notes: ${l.notesUrl}<br>
-            DPP: ${l.dppLink || '—'}<br>
-            Thumbnail: ${l.thumbnail ? `<img src="${l.thumbnail}" style="max-height:80px; border-radius:6px;">` : '—'}
+          <div class="lecture-item">
+            <strong>${l.title}</strong><br>Video: ${l.videoUrl}<br>Notes: ${l.notesUrl}<br>DPP: ${l.dppLink||'—'}<br>
+            ${l.thumbnail ? `<img src="${l.thumbnail}" style="max-height:80px;">` : ''}
             <button class="btn btn-danger delete-lecture-btn" data-id="${l._id}">Remove</button>
-          </div>
-        `).join('')}
-        <h4 style="margin-top:25px;">Add New Lecture</h4>
+          </div>`).join('')}
+        <h4>Add Lecture</h4>
         <form id="addLectureForm">
-          <input type="text" id="lecTitle" placeholder="Lecture Topic" required style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
-          <input type="text" id="lecVideo" placeholder="YouTube Embed URL" required style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
-          <input type="text" id="lecNotes" placeholder="Notes Link (Google Drive)" required style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
-          <input type="text" id="lecDpp" placeholder="DPP Link (optional)" style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
-          <input type="text" id="lecThumbnail" placeholder="Thumbnail URL (optional)" style="width:100%; margin-bottom:10px; padding:10px; border-radius:8px; border:1px solid #ddd;">
-          <button type="submit" class="btn btn-primary">Add Lecture</button>
-        </form>
-      `;
-
-      // Delete lecture handler
-      document.querySelectorAll('.delete-lecture-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('Delete this lecture?')) return;
-          await fetch(`${API_BASE}/admin/lectures/${courseId}/${btn.dataset.id}`, {
-            method: 'DELETE',
-            headers: authHeaders()
-          });
-          refreshLectures();
-          showToast('Lecture removed', 'info');
-        });
-      });
-
-      // Add lecture form handler
+          <input type="text" id="lecTitle" placeholder="Topic" required>
+          <input type="text" id="lecVideo" placeholder="YouTube URL" required>
+          <input type="text" id="lecNotes" placeholder="Notes Link" required>
+          <input type="text" id="lecDpp" placeholder="DPP Link">
+          <input type="text" id="lecThumbnail" placeholder="Thumbnail URL">
+          <button type="submit" class="btn btn-primary">Add</button>
+        </form>`;
+      document.querySelectorAll('.delete-lecture-btn').forEach(b => b.addEventListener('click', async () => {
+        await fetch(`${API_BASE}/admin/lectures/${courseId}/${b.dataset.id}`, { method:'DELETE', headers: authHeaders() });
+        refresh();
+      }));
       document.getElementById('addLectureForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const body = {
@@ -758,21 +593,13 @@ async function adminLectureManager() {
           dppLink: document.getElementById('lecDpp').value,
           thumbnail: document.getElementById('lecThumbnail').value
         };
-        await fetch(`${API_BASE}/admin/lectures/${courseId}`, {
-          method: 'POST',
-          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        refreshLectures();
-        showToast('Lecture added successfully', 'success');
+        await fetch(`${API_BASE}/admin/lectures/${courseId}`, { method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        refresh(); showToast('Lecture added', 'success');
       });
-    } catch {
-      panel.innerHTML = '<p>Error loading lectures.</p>';
-    }
+    } catch { panel.innerHTML = '<p>Error.</p>'; }
   }
-
-  select.addEventListener('change', refreshLectures);
-  refreshLectures(); // initial load
+  select.addEventListener('change', refresh);
+  refresh();
 }
 
 // ---------- ADMIN - STUDENT LIST ----------
@@ -780,70 +607,36 @@ async function adminStudentList() {
   try {
     const res = await fetch(`${API_BASE}/admin/students`, { headers: authHeaders() });
     const students = await res.json();
-    document.getElementById('adminContent').innerHTML = students.length
-      ? `
-        <table style="width:100%; background:white; border-collapse:collapse; border-radius:12px; overflow:hidden;">
-          <thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead>
-          <tbody>${students.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td></tr>`).join('')}</tbody>
-        </table>
-      `
-      : '<p>No students registered.</p>';
-  } catch {
-    showToast('Error loading students', 'error');
-  }
+    document.getElementById('adminContent').innerHTML = students.length ? `
+      <table><thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead><tbody>${students.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td></tr>`).join('')}</tbody></table>` : '<p>No students.</p>';
+  } catch { showToast('Error', 'error'); }
 }
 
-// ---------- ADMIN - ASSIGN COURSE (with search) ----------
+// ---------- ADMIN - ASSIGN COURSE with search ----------
 async function adminAssignCourse() {
-  try {
-    const [usersRes, coursesRes] = await Promise.all([
-      fetch(`${API_BASE}/admin/students`, { headers: authHeaders() }),
-      fetch(`${API_BASE}/courses`)
-    ]);
-    const users = await usersRes.json();
-    const courses = await coursesRes.json();
-
-    document.getElementById('adminContent').innerHTML = `
-      <h3>Assign Course to Student</h3>
-      <input type="text" id="studentSearch" placeholder="🔍 Search by name or email" style="width:100%; padding:12px; margin-bottom:20px; border-radius:10px; border:1px solid #ddd;">
-      <div class="form-group">
-        <label>Select Student</label>
-        <select id="assignStudent" required style="width:100%; padding:10px;">
-          ${users.map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`).join('')}
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Select Course</label>
-        <select id="assignCourse" required style="width:100%; padding:10px;">
-          ${courses.map(c => `<option value="${c._id}">${c.title} - ₹${c.price}</option>`).join('')}
-        </select>
-      </div>
-      <button class="btn btn-primary btn-full" id="assignBtn">Assign Course</button>
-    `;
-
-    // Real-time search
-    document.getElementById('studentSearch').addEventListener('input', (e) => {
-      const term = e.target.value.toLowerCase();
-      const select = document.getElementById('assignStudent');
-      select.innerHTML = users
-        .filter(u => u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term))
-        .map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`)
-        .join('');
-    });
-
-    document.getElementById('assignBtn').addEventListener('click', async () => {
-      const userEmail = document.getElementById('assignStudent').value;
-      const courseId = document.getElementById('assignCourse').value;
-      const res = await fetch(`${API_BASE}/admin/assign`, {
-        method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userEmail, courseId })
-      });
-      const data = await res.json();
-      if (res.ok) showToast('Course assigned successfully!', 'success');
-      else showToast(data.message, 'error');
-    });
-  } catch {
-    showToast('Error loading data', 'error');
-  }
+  const [usersRes, coursesRes] = await Promise.all([
+    fetch(`${API_BASE}/admin/students`, { headers: authHeaders() }),
+    fetch(`${API_BASE}/courses`)
+  ]);
+  const users = await usersRes.json();
+  const courses = await coursesRes.json();
+  let html = `
+    <h3>Assign Course</h3>
+    <input type="text" id="studentSearch" placeholder="Search student name/email">
+    <select id="assignStudent">${users.map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`).join('')}</select>
+    <select id="assignCourse">${courses.map(c => `<option value="${c._id}">${c.title} - ₹${c.price}</option>`).join('')}</select>
+    <button class="btn btn-primary" id="assignBtn">Assign</button>`;
+  document.getElementById('adminContent').innerHTML = html;
+  document.getElementById('studentSearch').addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    const sel = document.getElementById('assignStudent');
+    sel.innerHTML = users.filter(u => u.name.toLowerCase().includes(term) || u.email.toLowerCase().includes(term)).map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`).join('');
+  });
+  document.getElementById('assignBtn').addEventListener('click', async () => {
+    const userEmail = document.getElementById('assignStudent').value;
+    const courseId = document.getElementById('assignCourse').value;
+    const res = await fetch(`${API_BASE}/admin/assign`, { method:'POST', headers:{...authHeaders(),'Content-Type':'application/json'}, body: JSON.stringify({ userEmail, courseId }) });
+    const data = await res.json();
+    if (res.ok) showToast('Assigned!', 'success'); else showToast(data.message, 'error');
+  });
 }
