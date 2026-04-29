@@ -115,7 +115,7 @@ app.post('/api/auth/send-otp',
 
       await OTP.deleteMany({ email, purpose: 'registration' });
       const otp = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
       await new OTP({ email, otp, expiresAt, purpose: 'registration' }).save();
 
       await transporter.sendMail({
@@ -324,7 +324,6 @@ app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
 });
 
 // ---------- ADMIN ROUTES ----------
-// Dashboard stats
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   const totalCourses = await Course.countDocuments();
   const totalStudents = await User.countDocuments({ isVerified: true });
