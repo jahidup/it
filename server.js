@@ -20,7 +20,7 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// ---------- MONGOOSE SCHEMAS ----------
+// ---------- SCHEMAS ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -33,7 +33,9 @@ const User = mongoose.model('User', userSchema);
 const lectureSchema = new mongoose.Schema({
   title: String,
   videoUrl: String,
-  notesUrl: String
+  notesUrl: String,
+  dppLink: String,
+  thumbnail: String
 });
 const courseSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -56,7 +58,8 @@ const otpSchema = new mongoose.Schema({
   email: { type: String, required: true },
   otp: { type: String, required: true },
   expiresAt: { type: Date, required: true },
-  verified: { type: Boolean, default: false }
+  verified: { type: Boolean, default: false },
+  purpose: { type: String, enum: ['registration', 'reset'], default: 'registration' }
 });
 otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const OTP = mongoose.model('OTP', otpSchema);
@@ -64,10 +67,9 @@ const OTP = mongoose.model('OTP', otpSchema);
 // ---------- AUTH MIDDLEWARE ----------
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
-  if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
+  if (!token) return res.status(401).json({ message: 'No token provided.' });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
   } catch (err) {
     res.status(401).json({ message: 'Invalid token.' });
@@ -76,9 +78,7 @@ const authMiddleware = (req, res, next) => {
 
 const adminMiddleware = (req, res, next) => {
   authMiddleware(req, res, () => {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Admin access required.' });
-    }
+    if (req.user.role !== 'admin') return res.status(403).json({ message: 'Admin access required.' });
     next();
   });
 };
@@ -96,66 +96,52 @@ const ALLOWED_DOMAINS = [
   'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
   'aol.com', 'icloud.com', 'protonmail.com', 'zoho.com', 'yandex.com', 'mail.com'
 ];
-
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ---------- AUTH ROUTES ----------
-// Send OTP
+// 1. Send OTP (registration)
 app.post('/api/auth/send-otp',
-  rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests. Try later.' }),
+  rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests.' }),
   async (req, res) => {
     try {
       const { email } = req.body;
-      if (!email) return res.status(400).json({ message: 'Email is required.' });
-
+      if (!email) return res.status(400).json({ message: 'Email required.' });
       const domain = email.split('@')[1];
       if (!ALLOWED_DOMAINS.includes(domain)) {
-        return res.status(400).json({ message: 'Only popular email providers are allowed.' });
+        return res.status(400).json({ message: 'Only popular email providers allowed.' });
       }
-
       const existingUser = await User.findOne({ email });
-      if (existingUser?.isVerified) {
-        return res.status(400).json({ message: 'Email already registered.' });
-      }
+      if (existingUser?.isVerified) return res.status(400).json({ message: 'Email already registered.' });
 
-      await OTP.deleteMany({ email });
-
+      await OTP.deleteMany({ email, purpose: 'registration' });
       const otp = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-      await new OTP({ email, otp, expiresAt }).save();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+      await new OTP({ email, otp, expiresAt, purpose: 'registration' }).save();
 
       await transporter.sendMail({
         from: `"Sankalp Digital Pathshala" <${process.env.EMAIL_USER}>`,
         to: email,
         subject: 'Your OTP for Registration',
-        html: `<h2>Welcome to Sankalp Digital Pathshala!</h2>
-               <p>Your OTP is: <strong>${otp}</strong></p>
-               <p>It expires in 10 minutes.</p>`
+        html: `<h2>Welcome!</h2><p>Your OTP is: <strong>${otp}</strong></p><p>Expires in 10 minutes.</p>`
       });
-
       res.json({ message: 'OTP sent to your email.' });
     } catch (err) {
       console.error(err);
       res.status(500).json({ message: 'Server error.' });
     }
-  }
-);
+  });
 
-// Verify OTP
+// 2. Verify OTP (registration)
 app.post('/api/auth/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP required.' });
-
-    const record = await OTP.findOne({ email, otp });
+    const record = await OTP.findOne({ email, otp, purpose: 'registration' });
     if (!record) return res.status(400).json({ message: 'Invalid OTP.' });
     if (record.verified) return res.status(400).json({ message: 'OTP already used.' });
     if (new Date() > record.expiresAt) {
-      await OTP.deleteMany({ email });
+      await OTP.deleteMany({ email, purpose: 'registration' });
       return res.status(400).json({ message: 'OTP expired.' });
     }
-
     record.verified = true;
     await record.save();
     res.json({ message: 'OTP verified. You can now register.' });
@@ -164,45 +150,33 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   }
 });
 
-// Register (after OTP verification)
+// 3. Register
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, phone, password, otp } = req.body;
     if (!name || !email || !phone || !password || !otp) {
-      return res.status(400).json({ message: 'All fields are required.' });
+      return res.status(400).json({ message: 'All fields required.' });
     }
-
     const domain = email.split('@')[1];
     if (!ALLOWED_DOMAINS.includes(domain)) {
-      return res.status(400).json({ message: 'Only popular email providers are allowed.' });
+      return res.status(400).json({ message: 'Only popular email providers allowed.' });
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: 'Email already registered.' });
 
-    const otpRecord = await OTP.findOne({ email, otp, verified: true });
-    if (!otpRecord) return res.status(400).json({ message: 'OTP not verified or invalid.' });
+    const otpRecord = await OTP.findOne({ email, otp, verified: true, purpose: 'registration' });
+    if (!otpRecord) return res.status(400).json({ message: 'OTP not verified.' });
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const user = new User({
-      name,
-      email,
-      phone,
-      password: hashedPassword,
-      isVerified: true
-    });
-    await user.save();
-
-    await OTP.deleteMany({ email });
+    const hashed = await bcrypt.hash(password, 10);
+    const user = await new User({ name, email, phone, password: hashed, isVerified: true }).save();
+    await OTP.deleteMany({ email, purpose: 'registration' });
 
     const token = jwt.sign(
       { userId: user._id, email: user.email, name: user.name, role: 'student' },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-
     res.status(201).json({
       token,
       user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
@@ -213,7 +187,7 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Login
+// 4. Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -230,7 +204,6 @@ app.post('/api/auth/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-
     res.json({
       token,
       user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
@@ -240,25 +213,17 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Admin Login
+// 5. Admin Login
 app.post('/api/auth/admin-login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-      const token = jwt.sign(
-        { email, role: 'admin' },
-        process.env.JWT_SECRET,
-        { expiresIn: '1d' }
-      );
-      return res.json({ token });
-    }
-    res.status(401).json({ message: 'Invalid admin credentials.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
+  const { email, password } = req.body;
+  if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+    const token = jwt.sign({ email, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1d' });
+    return res.json({ token });
   }
+  res.status(401).json({ message: 'Invalid admin credentials.' });
 });
 
-// Forgot Password – send reset link
+// 6. Forgot Password – send OTP
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -266,46 +231,63 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: 'No account found with that email.' });
 
-    const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    // In production, send a real link to your frontend reset page
-    const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
+    await OTP.deleteMany({ email, purpose: 'reset' });
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    await new OTP({ email, otp, expiresAt, purpose: 'reset' }).save();
 
     await transporter.sendMail({
       from: `"Sankalp Digital Pathshala" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Password Reset Request',
-      html: `<p>You requested a password reset.</p>
-             <p>Click <a href="${resetLink}">here</a> to reset your password. This link expires in 15 minutes.</p>`
+      subject: 'Password Reset OTP',
+      html: `<h2>Reset Your Password</h2><p>Your OTP is: <strong>${otp}</strong></p><p>Expires in 10 minutes.</p>`
     });
-
-    res.json({ message: 'Reset link sent to your email.' });
+    res.json({ message: 'OTP sent to your email.' });
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
   }
 });
 
-// Reset Password using token
-app.post('/api/auth/reset-password', async (req, res) => {
+// 7. Verify Reset OTP
+app.post('/api/auth/verify-reset-otp', async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
-    if (!token || !newPassword) return res.status(400).json({ message: 'Token and new password required.' });
+    const { email, otp } = req.body;
+    const record = await OTP.findOne({ email, otp, purpose: 'reset' });
+    if (!record) return res.status(400).json({ message: 'Invalid OTP.' });
+    if (record.verified) return res.status(400).json({ message: 'OTP already used.' });
+    if (new Date() > record.expiresAt) return res.status(400).json({ message: 'OTP expired.' });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
-    if (!user) return res.status(400).json({ message: 'Invalid token.' });
-
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
-    await user.save();
-
-    res.json({ message: 'Password updated. You can now login.' });
+    record.verified = true;
+    await record.save();
+    res.json({ message: 'OTP verified. You can now reset your password.' });
   } catch (err) {
-    res.status(400).json({ message: 'Token expired or invalid.' });
+    res.status(500).json({ message: 'Server error.' });
   }
 });
 
-// ---------- COURSES ROUTES ----------
-// Get all courses (with enrollment count)
+// 8. Reset Password
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) return res.status(400).json({ message: 'All fields required.' });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found.' });
+
+    const otpRecord = await OTP.findOne({ email, otp, verified: true, purpose: 'reset' });
+    if (!otpRecord) return res.status(400).json({ message: 'OTP not verified.' });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    await OTP.deleteMany({ email, purpose: 'reset' });
+
+    res.json({ message: 'Password updated. You can now login.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// ---------- COURSES ROUTES (public) ----------
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
   for (let course of courses) {
@@ -314,7 +296,6 @@ app.get('/api/courses', async (req, res) => {
   res.json(courses);
 });
 
-// Get single course (with enrollment count)
 app.get('/api/courses/:id', async (req, res) => {
   const course = await Course.findById(req.params.id).lean();
   if (!course) return res.status(404).json({ message: 'Course not found.' });
@@ -322,35 +303,22 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// Get enrollment count for a course (standalone)
-app.get('/api/courses/:id/enrollment-count', async (req, res) => {
-  const count = await Enrollment.countDocuments({ courseId: req.params.id });
-  res.json({ count });
-});
-
-// Enroll (purchase) – authenticated student
 app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
-  try {
-    const { courseId } = req.body;
-    const userEmail = req.user.email;
+  const { courseId } = req.body;
+  const userEmail = req.user.email;
 
-    const existing = await Enrollment.findOne({ userEmail, courseId });
-    if (existing) return res.status(400).json({ message: 'Already enrolled.' });
+  const existing = await Enrollment.findOne({ userEmail, courseId });
+  if (existing) return res.status(400).json({ message: 'Already enrolled.' });
 
-    const enrollment = new Enrollment({ userEmail, courseId });
-    await enrollment.save();
-    res.status(201).json({ message: 'Enrolled successfully.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  await new Enrollment({ userEmail, courseId }).save();
+  res.status(201).json({ message: 'Enrolled successfully.' });
 });
 
-// Get my enrolled courses (student dashboard)
 app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
   const enrollments = await Enrollment.find({ userEmail: req.user.email }).populate('courseId').lean();
   const courses = enrollments.map(e => e.courseId).filter(Boolean);
-  for (let course of courses) {
-    course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
+  for (let c of courses) {
+    c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
   }
   res.json(courses);
 });
@@ -364,7 +332,7 @@ app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   res.json({ totalCourses, totalStudents, totalEnrollments });
 });
 
-// Add course
+// Course CRUD
 app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   try {
     const { title, description, price, originalPrice, imageUrl, lectures } = req.body;
@@ -383,7 +351,6 @@ app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   }
 });
 
-// Update course (full)
 app.put('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   try {
     const { title, description, price, originalPrice, imageUrl, lectures } = req.body;
@@ -399,32 +366,36 @@ app.put('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   }
 });
 
-// Add a lecture to a course
-app.post('/api/admin/courses/:id/lectures', adminMiddleware, async (req, res) => {
-  const course = await Course.findById(req.params.id);
-  if (!course) return res.status(404).json({ message: 'Course not found.' });
-  course.lectures.push(req.body); // { title, videoUrl, notesUrl }
-  await course.save();
-  res.json(course);
-});
-
-// Delete a lecture from a course
-app.delete('/api/admin/courses/:id/lectures/:lectureId', adminMiddleware, async (req, res) => {
-  const course = await Course.findById(req.params.id);
-  if (!course) return res.status(404).json({ message: 'Course not found.' });
-  course.lectures = course.lectures.filter(l => l._id.toString() !== req.params.lectureId);
-  await course.save();
-  res.json(course);
-});
-
-// Delete course
 app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   await Course.findByIdAndDelete(req.params.id);
   await Enrollment.deleteMany({ courseId: req.params.id });
   res.json({ message: 'Course deleted.' });
 });
 
-// List all students
+// Lecture management (dedicated endpoints)
+app.get('/api/admin/lectures/:courseId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.courseId);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  res.json(course.lectures);
+});
+
+app.post('/api/admin/lectures/:courseId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.courseId);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.lectures.push(req.body); // { title, videoUrl, notesUrl, dppLink, thumbnail }
+  await course.save();
+  res.json(course.lectures);
+});
+
+app.delete('/api/admin/lectures/:courseId/:lectureId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.courseId);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.lectures = course.lectures.filter(l => l._id.toString() !== req.params.lectureId);
+  await course.save();
+  res.json(course.lectures);
+});
+
+// Students list
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   const students = await User.find({}, 'name email phone');
   res.json(students);
@@ -437,11 +408,10 @@ app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
     if (!userEmail || !courseId) return res.status(400).json({ message: 'Missing fields.' });
 
     const existing = await Enrollment.findOne({ userEmail, courseId });
-    if (existing) return res.status(400).json({ message: 'Student already enrolled.' });
+    if (existing) return res.status(400).json({ message: 'Already enrolled.' });
 
-    const enrollment = new Enrollment({ userEmail, courseId });
-    await enrollment.save();
-    res.status(201).json({ message: 'Course assigned successfully.' });
+    await new Enrollment({ userEmail, courseId }).save();
+    res.status(201).json({ message: 'Assigned.' });
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
   }
