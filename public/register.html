@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Sankalp Digital Pathshala</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <span class="logo-icon">🎓</span> Sankalp Digital Pathshala
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="courses.html">Courses</a></li>
+                <li><a href="login.html">Login</a></li>
+                <li><a href="register.html" class="active">Register</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="section auth-section">
+        <div class="auth-container">
+            <div class="auth-card">
+                <h2 class="auth-title">Create Account</h2>
+                <p class="auth-subtitle">Join our learning community</p>
+                <form id="registerForm" class="auth-form">
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" placeholder="Enter your full name" required minlength="3">
+                        <span class="form-error" id="nameError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" placeholder="Enter your email" required>
+                        <span class="form-error" id="emailError"></span>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-outline" id="sendOtpBtn">Send OTP</button>
+                    </div>
+                    <div id="otpSection" style="display:none;">
+                        <div class="form-group">
+                            <input type="text" id="otp" placeholder="Enter OTP" required>
+                            <button type="button" class="btn btn-outline" id="verifyOtpBtn">Verify OTP</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" placeholder="Enter your phone number" required pattern="[0-9]{10}">
+                        <span class="form-error" id="phoneError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" placeholder="Create a password" required minlength="6">
+                        <span class="form-error" id="passwordError"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" placeholder="Confirm your password" required minlength="6">
+                        <span class="form-error" id="confirmPasswordError"></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" id="registerBtn" disabled>Create Account</button>
+                </form>
+                <p class="auth-switch">Already have an account? <a href="login.html">Login here</a></p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 Sankalp Digital Pathshala. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
