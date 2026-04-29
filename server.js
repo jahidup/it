@@ -1,4 +1,3 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -14,14 +13,14 @@ const app = express();
 // ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // Serve frontend
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- DATABASE CONNECTION ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// ---------- MONGOOSE SCHEMAS (all defined inline) ----------
+// ---------- MONGOOSE SCHEMAS ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -36,11 +35,11 @@ const lectureSchema = new mongoose.Schema({
   videoUrl: String,
   notesUrl: String
 });
-
 const courseSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
+  originalPrice: { type: Number, default: null },
   imageUrl: { type: String, default: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600' },
   lectures: [lectureSchema]
 }, { timestamps: true });
@@ -59,7 +58,7 @@ const otpSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true },
   verified: { type: Boolean, default: false }
 });
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const OTP = mongoose.model('OTP', otpSchema);
 
 // ---------- AUTH MIDDLEWARE ----------
@@ -68,7 +67,7 @@ const authMiddleware = (req, res, next) => {
   if (!token) return res.status(401).json({ message: 'Access denied. No token provided.' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { userId, email, name, role }
+    req.user = decoded;
     next();
   } catch (err) {
     res.status(401).json({ message: 'Invalid token.' });
@@ -84,16 +83,15 @@ const adminMiddleware = (req, res, next) => {
   });
 };
 
-// ---------- EMAIL SETUP (Nodemailer) ----------
+// ---------- EMAIL SETUP ----------
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS     // Gmail App Password
+    pass: process.env.EMAIL_PASS
   }
 });
 
-// Allowed email domains for registration
 const ALLOWED_DOMAINS = [
   'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
   'aol.com', 'icloud.com', 'protonmail.com', 'zoho.com', 'yandex.com', 'mail.com'
@@ -101,13 +99,10 @@ const ALLOWED_DOMAINS = [
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// ---------- ROUTES ----------
-
-// ====================== AUTH ROUTES ======================
-
-// 1. Send OTP
+// ---------- AUTH ROUTES ----------
+// Send OTP
 app.post('/api/auth/send-otp',
-  rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests, try later.' }),
+  rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests. Try later.' }),
   async (req, res) => {
     try {
       const { email } = req.body;
@@ -115,15 +110,14 @@ app.post('/api/auth/send-otp',
 
       const domain = email.split('@')[1];
       if (!ALLOWED_DOMAINS.includes(domain)) {
-        return res.status(400).json({ message: 'Only popular email providers (Gmail, Yahoo, etc.) are allowed.' });
+        return res.status(400).json({ message: 'Only popular email providers are allowed.' });
       }
 
       const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser.isVerified) {
+      if (existingUser?.isVerified) {
         return res.status(400).json({ message: 'Email already registered.' });
       }
 
-      // Delete any previous OTP for this email
       await OTP.deleteMany({ email });
 
       const otp = generateOTP();
@@ -131,7 +125,6 @@ app.post('/api/auth/send-otp',
 
       await new OTP({ email, otp, expiresAt }).save();
 
-      // Send email
       await transporter.sendMail({
         from: `"Sankalp Digital Pathshala" <${process.env.EMAIL_USER}>`,
         to: email,
@@ -149,30 +142,29 @@ app.post('/api/auth/send-otp',
   }
 );
 
-// 2. Verify OTP
+// Verify OTP
 app.post('/api/auth/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP are required.' });
+    if (!email || !otp) return res.status(400).json({ message: 'Email and OTP required.' });
 
-    const otpRecord = await OTP.findOne({ email, otp });
-    if (!otpRecord) return res.status(400).json({ message: 'Invalid OTP.' });
-    if (otpRecord.verified) return res.status(400).json({ message: 'OTP already used.' });
-    if (new Date() > otpRecord.expiresAt) {
+    const record = await OTP.findOne({ email, otp });
+    if (!record) return res.status(400).json({ message: 'Invalid OTP.' });
+    if (record.verified) return res.status(400).json({ message: 'OTP already used.' });
+    if (new Date() > record.expiresAt) {
       await OTP.deleteMany({ email });
-      return res.status(400).json({ message: 'OTP expired. Request a new one.' });
+      return res.status(400).json({ message: 'OTP expired.' });
     }
 
-    otpRecord.verified = true;
-    await otpRecord.save();
-    res.json({ message: 'OTP verified. You can now complete registration.' });
+    record.verified = true;
+    await record.save();
+    res.json({ message: 'OTP verified. You can now register.' });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: 'Server error.' });
   }
 });
 
-// 3. Register (after OTP verification)
+// Register (after OTP verification)
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, phone, password, otp } = req.body;
@@ -191,7 +183,6 @@ app.post('/api/auth/register', async (req, res) => {
     const otpRecord = await OTP.findOne({ email, otp, verified: true });
     if (!otpRecord) return res.status(400).json({ message: 'OTP not verified or invalid.' });
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -204,10 +195,8 @@ app.post('/api/auth/register', async (req, res) => {
     });
     await user.save();
 
-    // Clear OTP
     await OTP.deleteMany({ email });
 
-    // Generate JWT
     const token = jwt.sign(
       { userId: user._id, email: user.email, name: user.name, role: 'student' },
       process.env.JWT_SECRET,
@@ -224,17 +213,17 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// 4. Login
+// Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Email and password required.' });
 
     const user = await User.findOne({ email, isVerified: true });
-    if (!user) return res.status(400).json({ message: 'Invalid email or password.' });
+    if (!user) return res.status(400).json({ message: 'Invalid credentials.' });
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid email or password.' });
+    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials.' });
 
     const token = jwt.sign(
       { userId: user._id, email: user.email, name: user.name, role: 'student' },
@@ -247,12 +236,11 @@ app.post('/api/auth/login', async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
     });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: 'Server error.' });
   }
 });
 
-// 5. Admin login
+// Admin Login
 app.post('/api/auth/admin-login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -263,46 +251,91 @@ app.post('/api/auth/admin-login', async (req, res) => {
         { expiresIn: '1d' }
       );
       return res.json({ token });
-    } else {
-      return res.status(401).json({ message: 'Invalid admin credentials.' });
     }
+    res.status(401).json({ message: 'Invalid admin credentials.' });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ message: 'Server error.' });
   }
 });
 
-// ====================== COURSES ROUTES ======================
+// Forgot Password – send reset link
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: 'Email required.' });
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'No account found with that email.' });
 
-// Get all courses (public)
+    const resetToken = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    // In production, send a real link to your frontend reset page
+    const resetLink = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
+
+    await transporter.sendMail({
+      from: `"Sankalp Digital Pathshala" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Password Reset Request',
+      html: `<p>You requested a password reset.</p>
+             <p>Click <a href="${resetLink}">here</a> to reset your password. This link expires in 15 minutes.</p>`
+    });
+
+    res.json({ message: 'Reset link sent to your email.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// Reset Password using token
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ message: 'Token and new password required.' });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId);
+    if (!user) return res.status(400).json({ message: 'Invalid token.' });
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    await user.save();
+
+    res.json({ message: 'Password updated. You can now login.' });
+  } catch (err) {
+    res.status(400).json({ message: 'Token expired or invalid.' });
+  }
+});
+
+// ---------- COURSES ROUTES ----------
+// Get all courses (with enrollment count)
 app.get('/api/courses', async (req, res) => {
-  try {
-    const courses = await Course.find().sort({ createdAt: -1 });
-    res.json(courses);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
+  const courses = await Course.find().sort({ createdAt: -1 }).lean();
+  for (let course of courses) {
+    course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
   }
+  res.json(courses);
 });
 
-// Get single course
+// Get single course (with enrollment count)
 app.get('/api/courses/:id', async (req, res) => {
-  try {
-    const course = await Course.findById(req.params.id);
-    if (!course) return res.status(404).json({ message: 'Course not found.' });
-    res.json(course);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  const course = await Course.findById(req.params.id).lean();
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
+  res.json(course);
 });
 
-// Enroll (purchase) – requires auth
+// Get enrollment count for a course (standalone)
+app.get('/api/courses/:id/enrollment-count', async (req, res) => {
+  const count = await Enrollment.countDocuments({ courseId: req.params.id });
+  res.json({ count });
+});
+
+// Enroll (purchase) – authenticated student
 app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   try {
     const { courseId } = req.body;
     const userEmail = req.user.email;
 
     const existing = await Enrollment.findOne({ userEmail, courseId });
-    if (existing) return res.status(400).json({ message: 'Already enrolled in this course.' });
+    if (existing) return res.status(400).json({ message: 'Already enrolled.' });
 
     const enrollment = new Enrollment({ userEmail, courseId });
     await enrollment.save();
@@ -312,39 +345,34 @@ app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   }
 });
 
-// Get my enrolled courses (student)
+// Get my enrolled courses (student dashboard)
 app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
-  try {
-    const enrollments = await Enrollment.find({ userEmail: req.user.email }).populate('courseId');
-    const courses = enrollments.map(e => e.courseId);
-    res.json(courses);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
+  const enrollments = await Enrollment.find({ userEmail: req.user.email }).populate('courseId').lean();
+  const courses = enrollments.map(e => e.courseId).filter(Boolean);
+  for (let course of courses) {
+    course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
   }
+  res.json(courses);
 });
 
-// ====================== ADMIN ROUTES (protected) ======================
-
+// ---------- ADMIN ROUTES ----------
 // Dashboard stats
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
-  try {
-    const totalCourses = await Course.countDocuments();
-    const totalStudents = await User.countDocuments({ isVerified: true });
-    const totalEnrollments = await Enrollment.countDocuments();
-    res.json({ totalCourses, totalStudents, totalEnrollments });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  const totalCourses = await Course.countDocuments();
+  const totalStudents = await User.countDocuments({ isVerified: true });
+  const totalEnrollments = await Enrollment.countDocuments();
+  res.json({ totalCourses, totalStudents, totalEnrollments });
 });
 
-// Add a course
+// Add course
 app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   try {
-    const { title, description, price, imageUrl, lectures } = req.body;
+    const { title, description, price, originalPrice, imageUrl, lectures } = req.body;
     const course = new Course({
       title,
       description,
       price,
+      originalPrice: originalPrice || null,
       imageUrl: imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600',
       lectures: lectures || []
     });
@@ -355,35 +383,61 @@ app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   }
 });
 
-// Delete a course
-app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
+// Update course (full)
+app.put('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   try {
-    await Course.findByIdAndDelete(req.params.id);
-    await Enrollment.deleteMany({ courseId: req.params.id }); // Clean up enrollments
-    res.json({ message: 'Course deleted.' });
+    const { title, description, price, originalPrice, imageUrl, lectures } = req.body;
+    const updated = await Course.findByIdAndUpdate(
+      req.params.id,
+      { title, description, price, originalPrice, imageUrl, lectures },
+      { new: true, runValidators: true }
+    );
+    if (!updated) return res.status(404).json({ message: 'Course not found.' });
+    res.json(updated);
   } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
+    res.status(500).json({ message: 'Update failed.' });
   }
+});
+
+// Add a lecture to a course
+app.post('/api/admin/courses/:id/lectures', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.lectures.push(req.body); // { title, videoUrl, notesUrl }
+  await course.save();
+  res.json(course);
+});
+
+// Delete a lecture from a course
+app.delete('/api/admin/courses/:id/lectures/:lectureId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.lectures = course.lectures.filter(l => l._id.toString() !== req.params.lectureId);
+  await course.save();
+  res.json(course);
+});
+
+// Delete course
+app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
+  await Course.findByIdAndDelete(req.params.id);
+  await Enrollment.deleteMany({ courseId: req.params.id });
+  res.json({ message: 'Course deleted.' });
 });
 
 // List all students
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
-  try {
-    const students = await User.find({}, 'name email phone');
-    res.json(students);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  const students = await User.find({}, 'name email phone');
+  res.json(students);
 });
 
-// Assign a course to a student
+// Assign course to student
 app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
   try {
     const { userEmail, courseId } = req.body;
-    if (!userEmail || !courseId) return res.status(400).json({ message: 'User email and course ID required.' });
+    if (!userEmail || !courseId) return res.status(400).json({ message: 'Missing fields.' });
 
     const existing = await Enrollment.findOne({ userEmail, courseId });
-    if (existing) return res.status(400).json({ message: 'Student is already enrolled in this course.' });
+    if (existing) return res.status(400).json({ message: 'Student already enrolled.' });
 
     const enrollment = new Enrollment({ userEmail, courseId });
     await enrollment.save();
@@ -393,13 +447,11 @@ app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
   }
 });
 
-// ---------- FRONTEND FALLBACK (for SPA / broken routes) ----------
+// ---------- FRONTEND FALLBACK ----------
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ---------- START SERVER ----------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
