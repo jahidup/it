@@ -1,5 +1,6 @@
 /* ============================================================
    SANKALP DIGITAL PATHSHALA – PREMIUM STYLESHEET
+   Expert‑Level Premium Colour Palette & Modern UI
    ============================================================ */
 
 /* ---------- RESET & BASE ---------- */
@@ -22,7 +23,7 @@ body {
 
 a {
   text-decoration: none;
-  color: #2563eb;
+  color: #4f46e5; /* indigo accent */
   transition: color 0.2s;
 }
 
@@ -57,15 +58,10 @@ img {
   margin-bottom: 40px;
 }
 
-.text-center {
-  text-align: center;
-}
+.text-center { text-align: center; }
+.mt-3 { margin-top: 30px; }
 
-.mt-3 {
-  margin-top: 30px;
-}
-
-/* ---------- BUTTONS ---------- */
+/* ---------- BUTTONS – Premium Indigo Gradient ---------- */
 .btn {
   display: inline-block;
   padding: 12px 24px;
@@ -82,25 +78,25 @@ img {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: white;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
-  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+  background: linear-gradient(135deg, #4338ca, #4f46e5);
 }
 
 .btn-outline {
   background: transparent;
-  border: 2px solid #2563eb;
-  color: #2563eb;
+  border: 2px solid #4f46e5;
+  color: #4f46e5;
 }
 
 .btn-outline:hover {
-  background: #2563eb;
+  background: #4f46e5;
   color: white;
   transform: translateY(-1px);
 }
@@ -130,19 +126,19 @@ img {
   cursor: not-allowed;
 }
 
-/* ---------- NAVBAR (Slim, auto‑hide) ---------- */
+/* ---------- NAVBAR – Slim, Frosted Glass, Auto‑Hide ---------- */
 .navbar {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.03);
   z-index: 1000;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               background 0.3s;
-  padding: 8px 0;
+  padding: 10px 0;
 }
 
 .navbar.hidden {
@@ -188,8 +184,8 @@ img {
 
 .nav-links a:hover,
 .nav-links a.active {
-  background: #eff6ff;
-  color: #2563eb;
+  background: #eef2ff;
+  color: #4f46e5;
 }
 
 .nav-toggle {
@@ -198,12 +194,12 @@ img {
   border: none;
   font-size: 1.6rem;
   cursor: pointer;
-  color: #2563eb;
+  color: #4f46e5;
 }
 
-/* ---------- HERO ---------- */
+/* ---------- HERO – Indigo Gradient ---------- */
 .hero {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
   padding: 130px 0 100px;
   position: relative;
@@ -238,17 +234,11 @@ img {
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(25px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(25px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- COURSE CARDS ---------- */
+/* ---------- COURSE CARDS – Soft Shadows, Smooth Transitions ---------- */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -260,7 +250,7 @@ img {
   background: white;
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -271,7 +261,7 @@ img {
 
 .course-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgba(79, 70, 229, 0.1);
 }
 
 .course-card img {
@@ -307,7 +297,7 @@ img {
 .price {
   font-size: 1.4rem;
   font-weight: 700;
-  color: #2563eb;
+  color: #4f46e5;
 }
 
 .original-price {
@@ -339,7 +329,7 @@ img {
   background: white;
   border-radius: 20px;
   padding: 40px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
 }
 
 .course-detail h2 {
@@ -372,7 +362,7 @@ img {
 }
 
 .lecture-list li:hover {
-  background: #eff6ff;
+  background: #eef2ff;
 }
 
 /* ---------- FEATURES (Why Us) ---------- */
@@ -393,7 +383,7 @@ img {
 
 .feature-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 20px 40px rgba(79, 70, 229, 0.05);
 }
 
 .feature-icon {
@@ -468,8 +458,8 @@ img {
 .auth-form input:focus,
 .auth-form select:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
   background: white;
 }
 
@@ -559,7 +549,7 @@ img {
 
 .sidebar-link:hover,
 .sidebar-link.active {
-  background: rgba(37, 99, 235, 0.25);
+  background: rgba(99, 102, 241, 0.25); /* indigo tint */
   color: white;
 }
 
@@ -713,18 +703,12 @@ tr:hover {
 }
 
 .toast-info {
-  background: #2563eb;
+  background: #4f46e5;
 }
 
 @keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* ---------- FLOATING WHATSAPP ---------- */
@@ -804,6 +788,29 @@ tr:hover {
 
 .social-links a:hover {
   opacity: 0.8;
+}
+
+/* ---------- LECTURE MANAGER SPECIFIC (Admin) ---------- */
+.lecture-item {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 12px;
+}
+
+.lecture-item img {
+  max-height: 80px;
+  border-radius: 8px;
+}
+
+#studentSearch {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1rem;
+  margin-bottom: 15px;
 }
 
 /* ---------- LOADING ---------- */
