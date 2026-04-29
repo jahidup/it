@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Sankalp Digital Pathshala</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <a href="index.html">🎓 SDP</a>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="#" class="sidebar-link active" data-view="dashboard">📊 Dashboard</a></li>
+                <li><a href="#" class="sidebar-link" data-view="myCourses">📚 My Courses</a></li>
+                <li><a href="#" onclick="handleLogout()" class="sidebar-link logout-link">🚪 Logout</a></li>
+            </ul>
+        </aside>
+        <main class="dashboard-main">
+            <header class="dashboard-topbar">
+                <button class="sidebar-toggle-btn" id="sidebarToggle">☰</button>
+                <h2 id="dashboardTitle">Dashboard</h2>
+                <div class="topbar-user" id="topbarUser"></div>
+            </header>
+            <div class="dashboard-content" id="dashboardContent">
+                <div class="loading-spinner">Loading dashboard...</div>
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
