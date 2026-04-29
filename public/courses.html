@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Courses - Sankalp Digital Pathshala</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <span class="logo-icon">🎓</span> Sankalp Digital Pathshala
+            </a>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="courses.html" class="active">Courses</a></li>
+                <li id="navLogin"><a href="login.html">Login</a></li>
+                <li id="navRegister"><a href="register.html">Register</a></li>
+                <li id="navDashboard" style="display:none;"><a href="dashboard.html">Dashboard</a></li>
+                <li id="navAdmin" style="display:none;"><a href="admin.html">Admin</a></li>
+                <li id="navLogout" style="display:none;"><a href="#" onclick="handleLogout()">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="section">
+        <div class="container">
+            <h2 class="section-title">All Courses</h2>
+            <p class="section-subtitle">Browse our complete catalog of IT courses</p>
+            <div class="courses-grid" id="allCoursesGrid">
+                <div class="loading-spinner">Loading courses...</div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 Sankalp Digital Pathshala. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>
