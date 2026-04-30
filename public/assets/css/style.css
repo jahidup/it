@@ -1,6 +1,5 @@
 /* ============================================================
    SANKALP DIGITAL PATHSHALA – PREMIUM STYLESHEET
-   Expert‑Level Premium Colour Palette & Modern UI
    ============================================================ */
 
 /* ---------- RESET & BASE ---------- */
@@ -23,7 +22,7 @@ body {
 
 a {
   text-decoration: none;
-  color: #4f46e5; /* indigo accent */
+  color: #4f46e5;
   transition: color 0.2s;
 }
 
@@ -61,7 +60,7 @@ img {
 .text-center { text-align: center; }
 .mt-3 { margin-top: 30px; }
 
-/* ---------- BUTTONS – Premium Indigo Gradient ---------- */
+/* ---------- BUTTONS – Indigo Gradient ---------- */
 .btn {
   display: inline-block;
   padding: 12px 24px;
@@ -124,6 +123,19 @@ img {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Extra small / small buttons for lecture actions */
+.btn-xs {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 0.9rem;
 }
 
 /* ---------- NAVBAR – Slim, Frosted Glass, Auto‑Hide ---------- */
@@ -238,7 +250,7 @@ img {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- COURSE CARDS – Soft Shadows, Smooth Transitions ---------- */
+/* ---------- COURSE CARDS (Public) ---------- */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -480,7 +492,6 @@ img {
   font-weight: 600;
 }
 
-/* OTP buttons */
 #sendOtpBtn,
 #verifyOtpBtn {
   padding: 10px 20px;
@@ -549,7 +560,7 @@ img {
 
 .sidebar-link:hover,
 .sidebar-link.active {
-  background: rgba(99, 102, 241, 0.25); /* indigo tint */
+  background: rgba(99, 102, 241, 0.25);
   color: white;
 }
 
@@ -599,6 +610,81 @@ img {
 .dashboard-content {
   padding: 35px;
   flex: 1;
+}
+
+/* ---------- COMPACT COURSE & LECTURE LIST (Student Dashboard) ---------- */
+.compact-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compact-course-item {
+  background: white;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s;
+}
+
+.compact-course-item:hover {
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.08);
+}
+
+.course-info strong {
+  display: block;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.lecture-count {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.lecture-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.lecture-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lecture-row {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.03);
+  transition: background 0.2s;
+}
+
+.lecture-row:hover {
+  background: #f8fafc;
+}
+
+.lecture-title {
+  font-weight: 500;
+  color: #1e293b;
+  flex: 1;
+  margin-right: 15px;
+}
+
+.lecture-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 /* ---------- ADMIN OVERLAY ---------- */
@@ -790,7 +876,7 @@ tr:hover {
   opacity: 0.8;
 }
 
-/* ---------- LECTURE MANAGER SPECIFIC (Admin) ---------- */
+/* ---------- LECTURE MANAGER (Admin) ---------- */
 .lecture-item {
   background: #fff;
   border: 1px solid #e2e8f0;
