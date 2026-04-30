@@ -105,8 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(waBtn);
 });
 
-// ====================== COURSE CARD (with discount & enrollment) ======================
-function cardHTML(course, showViewContentBtn = false) {
+// ====================== COURSE CARD (public pages) ======================
+function cardHTML(course) {
   const disc = course.originalPrice && course.originalPrice > course.price
     ? `<span class="original-price">₹${course.originalPrice}</span>
        <span class="discount-badge">${Math.round((1 - course.price / course.originalPrice) * 100)}% off</span>`
@@ -114,9 +114,6 @@ function cardHTML(course, showViewContentBtn = false) {
   const enrolled = course.enrollmentCount
     ? `👥 ${course.enrollmentCount} students enrolled`
     : '👥 Be the first to enroll';
-  const actionBtn = showViewContentBtn
-    ? `<button class="btn btn-outline view-content-btn" data-id="${course._id}">View Content</button>`
-    : `<a href="course-detail.html?id=${course._id}" class="btn btn-primary btn-full">View Details</a>`;
   return `
     <div class="course-card">
       <img src="${course.imageUrl}" alt="${course.title}" style="width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:12px;">
@@ -127,7 +124,7 @@ function cardHTML(course, showViewContentBtn = false) {
         ${disc}
       </div>
       <div class="enrollment-count">${enrolled}</div>
-      ${actionBtn}
+      <a href="course-detail.html?id=${course._id}" class="btn btn-primary btn-full">View Details</a>
     </div>
   `;
 }
@@ -238,42 +235,42 @@ function showForgotPasswordModal() {
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
   document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
-    if (!email) return showToast('Enter email', 'error');
+    if(!email) return showToast('Enter email','error');
     setLoading(document.getElementById('sendForgotOtp'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/forgot-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email}) });
       const data = await res.json();
-      if (res.ok) { showToast(data.message, 'success'); document.getElementById('forgotOtpSection').style.display='block'; }
-      else showToast(data.message, 'error');
-    } catch { showToast('Network error', 'error'); }
-    finally { setLoading(document.getElementById('sendForgotOtp'), false); }
+      if(res.ok){ showToast(data.message,'success'); document.getElementById('forgotOtpSection').style.display='block'; }
+      else showToast(data.message,'error');
+    } catch{ showToast('Network error','error'); }
+    finally{ setLoading(document.getElementById('sendForgotOtp'), false); }
   });
   document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
-    if (!otp) return showToast('Enter OTP', 'error');
+    if(!otp) return showToast('Enter OTP','error');
     setLoading(document.getElementById('verifyForgotOtp'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, otp }) });
+      const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,otp}) });
       const data = await res.json();
-      if (res.ok) { showToast('OTP verified!', 'success'); document.getElementById('newPasswordSection').style.display='block'; }
-      else showToast(data.message, 'error');
-    } catch { showToast('Network error', 'error'); }
-    finally { setLoading(document.getElementById('verifyForgotOtp'), false); }
+      if(res.ok){ showToast('OTP verified!','success'); document.getElementById('newPasswordSection').style.display='block'; }
+      else showToast(data.message,'error');
+    } catch{ showToast('Network error','error'); }
+    finally{ setLoading(document.getElementById('verifyForgotOtp'), false); }
   });
   document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
     const newPassword = document.getElementById('newPassword').value;
-    if (!newPassword) return showToast('Enter new password', 'error');
+    if(!newPassword) return showToast('Enter new password','error');
     setLoading(document.getElementById('resetPasswordBtn'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, otp, newPassword }) });
+      const res = await fetch(`${API_BASE}/auth/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,otp,newPassword}) });
       const data = await res.json();
-      if (res.ok) { showToast('Password reset! Please login.', 'success'); modal.remove(); }
-      else showToast(data.message, 'error');
-    } catch { showToast('Network error', 'error'); }
-    finally { setLoading(document.getElementById('resetPasswordBtn'), false); }
+      if(res.ok){ showToast('Password reset! Please login.','success'); modal.remove(); }
+      else showToast(data.message,'error');
+    } catch{ showToast('Network error','error'); }
+    finally{ setLoading(document.getElementById('resetPasswordBtn'), false); }
   });
 }
 
@@ -333,7 +330,7 @@ function setupRegister() {
   });
 }
 
-// ====================== STUDENT DASHBOARD ======================
+// ====================== STUDENT DASHBOARD (COMPACT) ======================
 function setupDashboard() {
   const user = getCurrentUser();
   if (!user) { location.href = 'login.html'; return; }
@@ -370,7 +367,10 @@ async function loadDashboardHome() {
     if (!res.ok) throw new Error('Failed');
     const courses = await res.json();
     const count = Array.isArray(courses) ? courses.length : 0;
-    document.getElementById('dashboardContent').innerHTML = `<h2>Welcome, ${getCurrentUser().name}!</h2><p>Enrolled in <strong>${count}</strong> course(s).</p>`;
+    document.getElementById('dashboardContent').innerHTML = `
+      <h2>Welcome, ${getCurrentUser().name}!</h2>
+      <p>You are enrolled in <strong>${count}</strong> course(s).</p>
+    `;
   } catch {
     document.getElementById('dashboardContent').innerHTML = '<p>Error loading dashboard.</p>';
   }
@@ -381,42 +381,62 @@ async function loadMyCourses() {
     const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
     if (!res.ok) throw new Error('Failed');
     const courses = await res.json();
-    const html = Array.isArray(courses) && courses.length
-      ? courses.map(c => cardHTML(c, true)).join('')   // <-- show View Content button
-      : '<p>No enrolled courses yet.</p>';
+    if (!courses.length) {
+      document.getElementById('dashboardContent').innerHTML = '<p>No enrolled courses yet.</p>';
+      return;
+    }
+    let html = `<h3>My Courses</h3><div class="compact-course-list">`;
+    courses.forEach(course => {
+      html += `
+        <div class="compact-course-item">
+          <div class="course-info">
+            <strong>${course.title}</strong>
+            <span class="lecture-count">${course.lectures ? course.lectures.length : 0} lectures</span>
+          </div>
+          <button class="btn btn-sm btn-outline view-lectures-btn" data-id="${course._id}">📂 View Lectures</button>
+        </div>`;
+    });
+    html += `</div>`;
     document.getElementById('dashboardContent').innerHTML = html;
-    // Attach click handlers
-    document.querySelectorAll('.view-content-btn').forEach(btn => {
-      btn.addEventListener('click', () => viewContent(btn.dataset.id));
+
+    document.querySelectorAll('.view-lectures-btn').forEach(btn => {
+      btn.addEventListener('click', () => viewCourseLectures(btn.dataset.id));
     });
   } catch {
     document.getElementById('dashboardContent').innerHTML = '<p>Error loading courses.</p>';
   }
 }
 
-async function viewContent(courseId) {
+async function viewCourseLectures(courseId) {
   try {
     const res = await fetch(`${API_BASE}/courses/${courseId}`);
     if (!res.ok) throw new Error('Failed');
     const course = await res.json();
-    let html = `<h2>${course.title}</h2>`;
+    let html = `
+      <div class="lecture-header">
+        <button class="btn btn-sm btn-outline back-to-courses-btn">← Back to Courses</button>
+        <h3>${course.title}</h3>
+      </div>`;
     if (course.lectures && course.lectures.length) {
-      html += course.lectures.map((l, i) => `
-        <div style="margin-bottom:30px; background:white; padding:20px; border-radius:16px; box-shadow:0 4px 15px rgba(0,0,0,0.05);">
-          <h3>${i+1}. ${l.title}</h3>
-          ${l.thumbnail ? `<img src="${l.thumbnail}" style="width:100%; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:10px;">` : ''}
-          <div style="position:relative; padding-bottom:56.25%; height:0; margin:15px 0;">
-            <iframe src="${l.videoUrl}" style="position:absolute; top:0; left:0; width:100%; height:100%;" frameborder="0" allowfullscreen></iframe>
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <a href="${l.notesUrl}" target="_blank" class="btn btn-outline">📄 Notes</a>
-            ${l.dppLink ? `<a href="${l.dppLink}" target="_blank" class="btn btn-outline">📝 DPP</a>` : ''}
-          </div>
-        </div>`).join('');
+      html += `<div class="lecture-list-compact">`;
+      course.lectures.forEach((lec, idx) => {
+        html += `
+          <div class="lecture-row">
+            <span class="lecture-title">${idx+1}. ${lec.title}</span>
+            <div class="lecture-actions">
+              <a href="${lec.videoUrl}" target="_blank" class="btn btn-xs btn-primary">🎬 Video</a>
+              <a href="${lec.notesUrl}" target="_blank" class="btn btn-xs btn-outline">📄 Notes</a>
+              ${lec.dppLink ? `<a href="${lec.dppLink}" target="_blank" class="btn btn-xs btn-outline">📝 DPP</a>` : ''}
+            </div>
+          </div>`;
+      });
+      html += `</div>`;
     } else {
-      html += '<p>No lectures available.</p>';
+      html += `<p>No lectures available for this course.</p>`;
     }
     document.getElementById('dashboardContent').innerHTML = html;
+
+    document.querySelector('.back-to-courses-btn').addEventListener('click', loadMyCourses);
   } catch {
     showToast('Failed to load course content', 'error');
   }
@@ -475,6 +495,7 @@ function initAdmin() {
       else if (view === 'adminAssign') adminAssignCourse();
     });
   });
+
   adminStats();
 }
 
@@ -540,8 +561,7 @@ async function loadCourseList() {
       btn.addEventListener('click', async () => {
         if (!confirm('Delete?')) return;
         await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method:'DELETE', headers: authHeaders() });
-        showToast('Deleted', 'info');
-        loadCourseList();
+        showToast('Deleted', 'info'); loadCourseList();
       });
     });
   } catch { list.innerHTML = '<p>Error.</p>'; }
