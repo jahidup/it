@@ -1,79 +1,58 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sankalp Digital Pathshala</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login – Sankalp Digital Pathshala</title>
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="index.html" class="nav-logo">
-                <span class="logo-icon">🎓</span> Sankalp Digital Pathshala
-            </a>
-            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
-            <ul class="nav-links" id="navLinks">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="courses.html">Courses</a></li>
-                <li><a href="login.html" class="active">Login</a></li>
-                <li><a href="register.html">Register</a></li>
-            </ul>
-        </div>
-    </nav>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo"><span class="logo-icon">🎓</span> Sankalp Digital Pathshala</a>
+      <button class="nav-toggle" id="navToggle">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="courses.html">Courses</a></li>
+        <li><a href="login.html" class="active">Login</a></li>
+        <li><a href="register.html">Register</a></li>
+      </ul>
+    </div>
+  </nav>
 
-    <main class="section auth-section">
-        <div class="auth-container">
-            <div class="auth-card">
-                <h2 class="auth-title">Welcome Back</h2>
-                <p class="auth-subtitle">Login to access your courses</p>
-                <form id="loginForm" class="auth-form">
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <input type="email" id="email" placeholder="Enter your email" required>
-                        <span class="form-error" id="emailError"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" placeholder="Enter your password" required minlength="6">
-                        <span class="form-error" id="passwordError"></span>
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-full" id="loginBtn">Login</button>
-                </form>
-                <p class="auth-switch">Don't have an account? <a href="register.html">Register here</a></p>
-            </div>
-        </div>
-    </main>
+  <main class="section auth-section">
+    <div class="auth-container">
+      <div class="auth-card">
+        <h2 class="auth-title">Welcome Back</h2>
+        <p class="auth-subtitle">Login to access your courses</p>
+        <form id="loginForm" class="auth-form">
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" placeholder="Enter your email" required>
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="Enter your password" required minlength="6">
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Login</button>
+        </form>
+        <p class="auth-switch">Don't have an account? <a href="register.html">Register here</a></p>
+      </div>
+    </div>
+  </main>
 
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <h3>🎓 Sankalp Digital Pathshala</h3>
-                    <p>Empowering learners with quality IT education.</p>
-                </div>
-                <div class="footer-links">
-                    <h4>Quick Links</h4>
-                    <ul>
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="courses.html">Courses</a></li>
-                        <li><a href="login.html">Login</a></li>
-                        <li><a href="register.html">Register</a></li>
-                    </ul>
-                </div>
-                <div class="footer-contact">
-                    <h4>Contact Us</h4>
-                    <p>📧 info@sankalppathshala.com</p>
-                    <p>📞 +91 8055698328</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 Sankalp Digital Pathshala. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand"><h3>🎓 Sankalp Digital Pathshala</h3><p>Empowering learners with quality IT education.</p></div>
+        <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="courses.html">Courses</a></li><li><a href="login.html">Login</a></li><li><a href="register.html">Register</a></li></ul></div>
+        <div class="footer-contact"><h4>Contact Us</h4><p>📧 info@sankalppathshala.com</p><p>📞 +91 8055698328</p></div>
+      </div>
+      <div class="footer-bottom"><p>&copy; 2026 Sankalp Digital Pathshala. All rights reserved.</p></div>
+    </div>
+  </footer>
 
-    <div class="toast-container" id="toastContainer"></div>
-    <script src="assets/js/app.js"></script>
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>
