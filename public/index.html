@@ -1,113 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sankalp Digital Pathshala - Learn IT Skills Online</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sankalp Digital Pathshala – Learn IT Skills Online</title>
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="index.html" class="nav-logo">
-                <span class="logo-icon">🎓</span> Sankalp Digital Pathshala
-            </a>
-            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
-            <ul class="nav-links" id="navLinks">
-                <li><a href="index.html" class="active">Home</a></li>
-                <li><a href="courses.html">Courses</a></li>
-                <li id="navLogin"><a href="login.html">Login</a></li>
-                <li id="navRegister"><a href="register.html">Register</a></li>
-                <li id="navDashboard" style="display:none;"><a href="dashboard.html">Dashboard</a></li>
-                <li id="navAdmin" style="display:none;"><a href="admin.html">Admin</a></li>
-                <li id="navLogout" style="display:none;"><a href="#" onclick="handleLogout()">Logout</a></li>
-            </ul>
-        </div>
-    </nav>
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo"><span class="logo-icon">🎓</span> Sankalp Digital Pathshala</a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html" class="active">Home</a></li>
+        <li><a href="courses.html">Courses</a></li>
+        <li id="navLogin"><a href="login.html">Login</a></li>
+        <li id="navRegister"><a href="register.html">Register</a></li>
+        <li id="navDashboard" style="display:none;"><a href="dashboard.html">Dashboard</a></li>
+        <li id="navAdmin" style="display:none;"><a href="admin.html">Admin</a></li>
+        <li id="navLogout" style="display:none;"><a href="#" onclick="handleLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
 
-    <!-- Hero -->
-    <section class="hero">
-        <div class="hero-content">
-            <h1 class="hero-title">Learn IT Skills Online</h1>
-            <p class="hero-subtitle">Master in-demand tech skills with expert-led courses. Start your journey today and transform your career with Sankalp Digital Pathshala.</p>
-            <a href="courses.html" class="btn btn-primary btn-lg">Explore Courses</a>
-        </div>
-    </section>
+  <!-- Hero Carousel -->
+  <section class="hero-carousel">
+    <div class="carousel-slide active">
+      <div class="hero-content">
+        <h1 class="hero-title">Learn IT Skills Online</h1>
+        <p class="hero-subtitle">Master in‑demand tech skills with expert‑led courses. Start your journey today and transform your career with Sankalp Digital Pathshala.</p>
+        <a href="courses.html" class="btn btn-primary btn-lg">Explore Courses</a>
+      </div>
+    </div>
+    <div class="carousel-slide">
+      <div class="hero-content">
+        <h1 class="hero-title">100+ Expert Instructors</h1>
+        <p class="hero-subtitle">Learn from real‑world professionals who bring industry experience into every lesson.</p>
+        <a href="courses.html" class="btn btn-primary btn-lg">Browse Courses</a>
+      </div>
+    </div>
+    <div class="carousel-slide">
+      <div class="hero-content">
+        <h1 class="hero-title">Earn Certifications</h1>
+        <p class="hero-subtitle">Boost your resume with certificates recognised by top companies.</p>
+        <a href="courses.html" class="btn btn-primary btn-lg">Get Started</a>
+      </div>
+    </div>
+    <div class="carousel-controls">
+      <button class="prev-slide">❮</button>
+      <button class="next-slide">❯</button>
+    </div>
+  </section>
 
-    <!-- Featured Courses -->
-    <section class="section featured-courses" id="featuredCourses">
-        <div class="container">
-            <h2 class="section-title">Featured Courses</h2>
-            <p class="section-subtitle">Discover our most popular programs</p>
-            <div class="courses-grid" id="featuredCoursesGrid">
-                <div class="loading-spinner">Loading courses...</div>
-            </div>
-            <div class="text-center mt-3">
-                <a href="courses.html" class="btn btn-outline">View All Courses</a>
-            </div>
-        </div>
-    </section>
+  <!-- Featured Courses -->
+  <section class="section featured-courses" id="featuredCourses">
+    <div class="container">
+      <h2 class="section-title">Featured Courses</h2>
+      <p class="section-subtitle">Discover our most popular programs</p>
+      <div class="courses-grid" id="featuredCoursesGrid">
+        <div class="loading-spinner">Loading courses...</div>
+      </div>
+      <div class="text-center mt-3">
+        <a href="courses.html" class="btn btn-outline">View All Courses</a>
+      </div>
+    </div>
+  </section>
 
-    <!-- Why Choose Us -->
-    <section class="section why-us">
-        <div class="container">
-            <h2 class="section-title">Why Choose Us</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3>Expert Instructors</h3>
-                    <p>Learn from industry professionals with years of real-world experience in IT and software development.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📚</div>
-                    <h3>Practical Curriculum</h3>
-                    <p>Hands-on projects and real-world assignments designed to build your portfolio and practical skills.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎓</div>
-                    <h3>Certificate of Completion</h3>
-                    <p>Earn recognized certificates to showcase your achievements and boost your career prospects.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+  <!-- Milestones -->
+  <section class="section milestones">
+    <div class="container">
+      <h2 class="section-title">Our Impact</h2>
+      <div class="milestones-grid">
+        <div class="milestone-card"><h3>10,000+</h3><p>Students Enrolled</p></div>
+        <div class="milestone-card"><h3>500+</h3><p>Video Lectures</p></div>
+        <div class="milestone-card"><h3>95%</h3><p>Placement Success</p></div>
+        <div class="milestone-card"><h3>50+</h3><p>Industry Experts</p></div>
+      </div>
+    </div>
+  </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <h3>🎓 Sankalp Digital Pathshala</h3>
-                    <p>Transforming careers through affordable, high‑quality IT education.</p>
-                </div>
-                <div class="footer-links">
-                    <h4>Quick Links</h4>
-                    <ul>
-                        <li><a href="index.html">Home</a></li>
-                        <li><a href="courses.html">Courses</a></li>
-                        <li><a href="login.html">Login</a></li>
-                        <li><a href="register.html">Register</a></li>
-                    </ul>
-                </div>
-                <div class="footer-contact">
-                    <h4>Contact Us</h4>
-                    <p>📧 info@sankalppathshala.com</p>
-                    <p>📞 +91 8055698328</p>
-                    <div class="social-links" style="margin-top:10px;">
-                        <a href="#" style="font-size:1.5rem; margin-right:10px;">📘</a>
-                        <a href="#" style="font-size:1.5rem; margin-right:10px;">📷</a>
-                        <a href="#" style="font-size:1.5rem;">🐦</a>
-                    </div>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 Sankalp Digital Pathshala. Crafted with ❤️ for learners everywhere.</p>
-            </div>
+  <!-- Why Choose Us -->
+  <section class="section why-us">
+    <div class="container">
+      <h2 class="section-title">Why Choose Us</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🎯</div>
+          <h3>Expert Instructors</h3>
+          <p>Learn from industry professionals with years of real‑world experience in IT and software development.</p>
         </div>
-    </footer>
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <h3>Practical Curriculum</h3>
+          <p>Hands‑on projects and real‑world assignments designed to build your portfolio and practical skills.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎓</div>
+          <h3>Certificate of Completion</h3>
+          <p>Earn recognised certificates to showcase your achievements and boost your career prospects.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <div class="toast-container" id="toastContainer"></div>
-    <script src="assets/js/app.js"></script>
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <h3>🎓 Sankalp Digital Pathshala</h3>
+          <p>Transforming careers through affordable, high‑quality IT education. Learn from industry experts and build real‑world projects.</p>
+        </div>
+        <div class="footer-links">
+          <h4>Quick Links</h4>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="courses.html">Courses</a></li>
+            <li><a href="login.html">Login</a></li>
+            <li><a href="register.html">Register</a></li>
+          </ul>
+        </div>
+        <div class="footer-contact">
+          <h4>Contact Us</h4>
+          <p>📧 info@sankalppathshala.com</p>
+          <p>📞 +91 8055698328</p>
+          <div class="social-links" style="margin-top:10px;">
+            <a href="#" style="font-size:1.5rem; margin-right:10px;">📘</a>
+            <a href="#" style="font-size:1.5rem; margin-right:10px;">📷</a>
+            <a href="#" style="font-size:1.5rem;">🐦</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Sankalp Digital Pathshala. Crafted with ❤️ for learners everywhere.</p>
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>
