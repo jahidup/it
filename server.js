@@ -288,6 +288,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 // ---------- COURSES ROUTES (public) ----------
+// 1. Get all courses (with enrollment counts)
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
   for (let course of courses) {
@@ -296,13 +297,7 @@ app.get('/api/courses', async (req, res) => {
   res.json(courses);
 });
 
-app.get('/api/courses/:id', async (req, res) => {
-  const course = await Course.findById(req.params.id).lean();
-  if (!course) return res.status(404).json({ message: 'Course not found.' });
-  course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
-  res.json(course);
-});
-
+// 2. Enroll (purchase) – auth required
 app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   const { courseId } = req.body;
   const userEmail = req.user.email;
@@ -314,6 +309,7 @@ app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   res.status(201).json({ message: 'Enrolled successfully.' });
 });
 
+// 3. My enrollments – auth required (MUST BE BEFORE /:id)
 app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
   const enrollments = await Enrollment.find({ userEmail: req.user.email }).populate('courseId').lean();
   const courses = enrollments.map(e => e.courseId).filter(Boolean);
@@ -321,6 +317,14 @@ app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
     c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
   }
   res.json(courses);
+});
+
+// 4. Get single course (with enrollment count) – AFTER specific routes
+app.get('/api/courses/:id', async (req, res) => {
+  const course = await Course.findById(req.params.id).lean();
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
+  res.json(course);
 });
 
 // ---------- ADMIN ROUTES ----------
