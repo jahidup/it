@@ -1,10 +1,11 @@
 // ====================== CONFIG ======================
 const API_BASE = window.location.origin + '/api';
 
-// ====================== CACHE ======================
+// ====================== SIMPLE CACHE ======================
 function cacheGet(key) {
   const entry = JSON.parse(localStorage.getItem(key));
-  return entry && Date.now() < entry.expiry ? entry.data : null;
+  if (!entry || Date.now() > entry.expiry) return null;
+  return entry.data;
 }
 function cacheSet(key, data, ttl = 15000) {
   localStorage.setItem(key, JSON.stringify({ data, expiry: Date.now() + ttl }));
@@ -63,6 +64,7 @@ window.addEventListener('scroll', () => {
   lastScroll = currentScroll;
 });
 
+// ====================== NAVIGATION UPDATE ======================
 function updateNav() {
   const user = getCurrentUser();
   const ids = {
@@ -91,6 +93,7 @@ function updateNav() {
   if (toggle) toggle.onclick = () => links.classList.toggle('active');
 }
 
+// ====================== GLOBAL LOGOUT ======================
 window.handleLogout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('currentUser');
@@ -130,21 +133,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ====================== CAROUSEL ======================
 function initCarousel() {
-  let current = 0;
+  let currentSlide = 0;
   const slides = document.querySelectorAll('.carousel-slide');
   if (!slides.length) return;
   slides.forEach((s, i) => s.style.display = i === 0 ? 'block' : 'none');
   const next = document.querySelector('.next-slide');
   const prev = document.querySelector('.prev-slide');
   if (next) next.addEventListener('click', () => {
-    slides[current].style.display = 'none';
-    current = (current + 1) % slides.length;
-    slides[current].style.display = 'block';
+    slides[currentSlide].style.display = 'none';
+    currentSlide = (currentSlide + 1) % slides.length;
+    slides[currentSlide].style.display = 'block';
   });
   if (prev) prev.addEventListener('click', () => {
-    slides[current].style.display = 'none';
-    current = (current - 1 + slides.length) % slides.length;
-    slides[current].style.display = 'block';
+    slides[currentSlide].style.display = 'none';
+    currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+    slides[currentSlide].style.display = 'block';
   });
 }
 
@@ -153,10 +156,12 @@ function cardHTML(course) {
   const disc = course.originalPrice && course.originalPrice > course.price
     ? `<span class="original-price">₹${course.originalPrice}</span> <span class="discount-badge">${Math.round((1 - course.price / course.originalPrice) * 100)}% off</span>`
     : '';
-  const enrolled = course.enrollmentCount ? `👥 ${course.enrollmentCount} enrolled` : '👥 Be the first';
+  const enrolled = course.enrollmentCount
+    ? `👥 ${course.enrollmentCount} enrolled`
+    : '👥 Be the first';
   return `
     <div class="course-card">
-      <img src="${course.imageUrl}" alt="${course.title}" style="width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:12px;">
+      <img src="${course.imageUrl}" alt="${course.title}" style="width:100%; height:180px; object-fit:cover; border-radius:12px 12px 0 0;">
       <h3>${course.title}</h3>
       <p>${course.description}</p>
       <div class="price-container"><span class="price">₹${course.price}</span>${disc}</div>
@@ -173,7 +178,7 @@ async function loadFeatured() {
     const res = await fetch(`${API_BASE}/courses`);
     const courses = await res.json();
     grid.innerHTML = courses.slice(0, 3).map(cardHTML).join('');
-  } catch { grid.innerHTML = '<p>Failed to load.</p>'; }
+  } catch { grid.innerHTML = '<p>Failed to load courses.</p>'; }
 }
 
 async function loadAllCourses() {
@@ -183,7 +188,7 @@ async function loadAllCourses() {
     const res = await fetch(`${API_BASE}/courses`);
     const courses = await res.json();
     grid.innerHTML = courses.map(cardHTML).join('');
-  } catch { grid.innerHTML = '<p>Failed to load.</p>'; }
+  } catch { grid.innerHTML = '<p>Failed to load courses.</p>'; }
 }
 
 async function loadDetail() {
@@ -234,7 +239,7 @@ function setupLogin() {
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         showToast('Login successful!', 'success');
         location.href = 'dashboard.html';
-      } else showToast(data.message, 'error');
+      } else showToast(data.message || 'Login failed', 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(btn, false); }
   });
@@ -242,7 +247,7 @@ function setupLogin() {
   const forgotLink = document.createElement('a');
   forgotLink.href = '#'; forgotLink.textContent = 'Forgot Password?';
   forgotLink.style.display = 'block'; forgotLink.style.margin = '15px 0'; forgotLink.style.textAlign = 'center';
-  forgotLink.style.color = '#4f46e5'; forgotLink.style.cursor = 'pointer';
+  forgotLink.style.color = '#0ea5e9'; forgotLink.style.cursor = 'pointer';
   form.appendChild(forgotLink);
   forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgotPasswordModal(); });
 }
@@ -253,13 +258,13 @@ function showForgotPasswordModal() {
   modal.innerHTML = `
     <div class="modal-content" style="max-width:400px; padding:25px;">
       <h3>Reset Password</h3>
-      <input type="email" id="forgotEmail" placeholder="Your email" required style="width:100%; margin:10px 0; padding:10px; border-radius:8px; border:1px solid #ddd;">
+      <input type="email" id="forgotEmail" placeholder="Your email" required style="width:100%; margin:10px 0; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
       <button class="btn btn-primary btn-full" id="sendForgotOtp">Send OTP</button>
       <div id="forgotOtpSection" style="display:none; margin-top:15px;">
-        <input type="text" id="forgotOtp" placeholder="Enter OTP" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
+        <input type="text" id="forgotOtp" placeholder="Enter OTP" style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; margin-bottom:10px;">
         <button class="btn btn-outline btn-full" id="verifyForgotOtp">Verify OTP</button>
         <div id="newPasswordSection" style="display:none; margin-top:10px;">
-          <input type="password" id="newPassword" placeholder="New password" style="width:100%; padding:10px; border-radius:8px; border:1px solid #ddd; margin-bottom:10px;">
+          <input type="password" id="newPassword" placeholder="New password" style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; margin-bottom:10px;">
           <button class="btn btn-primary btn-full" id="resetPasswordBtn">Reset Password</button>
         </div>
       </div>
@@ -537,7 +542,7 @@ function openDoubtModal(courseId, lectureId) {
   modal.innerHTML = `
     <div class="modal-content" style="max-width:450px;">
       <h3>Ask a Doubt</h3>
-      <textarea id="doubtMsg" rows="3" placeholder="Type your doubt..." style="width:100%; margin-bottom:10px;"></textarea>
+      <textarea id="doubtMsg" rows="3" placeholder="Type your doubt..." style="width:100%; margin-bottom:10px; background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:10px;"></textarea>
       <button class="btn btn-primary" id="submitDoubtBtn">Submit</button>
       <button class="btn btn-outline" id="closeDoubtModal">Cancel</button>
     </div>`;
@@ -701,8 +706,7 @@ async function adminManageCourses() {
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description, price, originalPrice, imageUrl, lectures: [] })
       });
-      showToast('Course added!', 'success');
-      loadCourseList();
+      showToast('Course added!', 'success'); loadCourseList();
     } catch { showToast('Failed', 'error'); }
     finally { setLoading(btn, false); }
   });
@@ -727,8 +731,7 @@ async function loadCourseList() {
       btn.addEventListener('click', async () => {
         if (!confirm('Delete?')) return;
         await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method: 'DELETE', headers: authHeaders() });
-        showToast('Deleted', 'info');
-        loadCourseList();
+        showToast('Deleted', 'info'); loadCourseList();
       });
     });
   } catch { list.innerHTML = '<p>Error.</p>'; }
@@ -750,11 +753,11 @@ async function adminLectureManager() {
         <h4>Lectures</h4>
         ${lectures.map(l => `
           <div class="lecture-item">
-            <input type="text" value="${l.title}" class="edit-title" data-id="${l._id}">
-            <input type="text" value="${l.videoUrl}" class="edit-video" data-id="${l._id}">
-            <input type="text" value="${l.notesUrl}" class="edit-notes" data-id="${l._id}">
-            <input type="text" value="${l.dppLink||''}" class="edit-dpp" data-id="${l._id}">
-            <input type="text" value="${l.thumbnail||''}" class="edit-thumb" data-id="${l._id}">
+            <input type="text" value="${l.title}" class="edit-title" data-id="${l._id}" placeholder="Title">
+            <input type="text" value="${l.videoUrl}" class="edit-video" data-id="${l._id}" placeholder="Video URL">
+            <input type="text" value="${l.notesUrl}" class="edit-notes" data-id="${l._id}" placeholder="Notes URL">
+            <input type="text" value="${l.dppLink||''}" class="edit-dpp" data-id="${l._id}" placeholder="DPP Link">
+            <input type="text" value="${l.thumbnail||''}" class="edit-thumb" data-id="${l._id}" placeholder="Thumbnail URL">
             <button class="btn btn-sm btn-primary save-lecture-btn" data-id="${l._id}">Save</button>
             <button class="btn btn-sm btn-danger delete-lecture-btn" data-id="${l._id}">Remove</button>
           </div>`).join('')}
@@ -780,8 +783,7 @@ async function adminLectureManager() {
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, videoUrl, notesUrl, dppLink, thumbnail })
           });
-          refresh();
-          showToast('Lecture updated', 'success');
+          refresh(); showToast('Lecture updated', 'success');
         });
       });
       document.querySelectorAll('.delete-lecture-btn').forEach(b => b.addEventListener('click', async () => {
@@ -797,13 +799,8 @@ async function adminLectureManager() {
           dppLink: document.getElementById('lecDpp').value,
           thumbnail: document.getElementById('lecThumbnail').value
         };
-        await fetch(`${API_BASE}/admin/lectures/${courseId}`, {
-          method: 'POST',
-          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
-        });
-        refresh();
-        showToast('Lecture added', 'success');
+        await fetch(`${API_BASE}/admin/lectures/${courseId}`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        refresh(); showToast('Lecture added', 'success');
       });
     } catch { panel.innerHTML = '<p>Error.</p>'; }
   }
