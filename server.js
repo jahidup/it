@@ -9,13 +9,10 @@ const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
-
-// ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------- DATABASE CONNECTION ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
@@ -75,6 +72,7 @@ const LectureProgress = mongoose.model('LectureProgress', lectureProgressSchema)
 
 const doubtSchema = new mongoose.Schema({
   userEmail: String,
+  userName: String,
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
   lectureId: String,
   message: String,
@@ -83,16 +81,14 @@ const doubtSchema = new mongoose.Schema({
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ---------- AUTH MIDDLEWARE ----------
+// ---------- MIDDLEWARE ----------
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided.' });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch (err) {
-    res.status(401).json({ message: 'Invalid token.' });
-  }
+  } catch (err) { res.status(401).json({ message: 'Invalid token.' }); }
 };
 
 const adminMiddleware = (req, res, next) => {
@@ -105,10 +101,7 @@ const adminMiddleware = (req, res, next) => {
 // ---------- EMAIL SETUP ----------
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
 const ALLOWED_DOMAINS = [
@@ -118,7 +111,6 @@ const ALLOWED_DOMAINS = [
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ---------- AUTH ROUTES ----------
-// Send OTP (registration)
 app.post('/api/auth/send-otp',
   rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests.' }),
   async (req, res) => {
@@ -126,15 +118,14 @@ app.post('/api/auth/send-otp',
       const { email } = req.body;
       if (!email) return res.status(400).json({ message: 'Email required.' });
       const domain = email.split('@')[1];
-      if (!ALLOWED_DOMAINS.includes(domain)) {
+      if (!ALLOWED_DOMAINS.includes(domain))
         return res.status(400).json({ message: 'Only popular email providers allowed.' });
-      }
       const existingUser = await User.findOne({ email });
       if (existingUser?.isVerified) return res.status(400).json({ message: 'Email already registered.' });
 
       await OTP.deleteMany({ email, purpose: 'registration' });
       const otp = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
       await new OTP({ email, otp, expiresAt, purpose: 'registration' }).save();
 
       await transporter.sendMail({
@@ -146,11 +137,10 @@ app.post('/api/auth/send-otp',
       res.json({ message: 'OTP sent to your email.' });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ message: 'Server error. Please try again later.' });
+      res.status(500).json({ message: 'Server error.' });
     }
   });
 
-// Verify OTP (registration)
 app.post('/api/auth/verify-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -164,22 +154,17 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     record.verified = true;
     await record.save();
     res.json({ message: 'OTP verified.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error. Please try again later.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// Register
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, phone, password, otp } = req.body;
-    if (!name || !email || !phone || !password || !otp) {
+    if (!name || !email || !phone || !password || !otp)
       return res.status(400).json({ message: 'All fields required.' });
-    }
     const domain = email.split('@')[1];
-    if (!ALLOWED_DOMAINS.includes(domain)) {
+    if (!ALLOWED_DOMAINS.includes(domain))
       return res.status(400).json({ message: 'Only popular email providers allowed.' });
-    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: 'Email already registered.' });
@@ -196,25 +181,19 @@ app.post('/api/auth/register', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    res.status(201).json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
-    });
+    res.status(201).json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone } });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Server error. Please try again later.' });
+    res.status(500).json({ message: 'Server error.' });
   }
 });
 
-// Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Email and password required.' });
-
     const user = await User.findOne({ email, isVerified: true });
     if (!user) return res.status(400).json({ message: 'Invalid credentials.' });
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials.' });
 
@@ -223,17 +202,10 @@ app.post('/api/auth/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    res.json({
-      token,
-      user: { id: user._id, name: user.name, email: user.email, phone: user.phone }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error. Please try again later.' });
-  }
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, phone: user.phone } });
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// Admin login
 app.post('/api/auth/admin-login', async (req, res) => {
   const { email, password } = req.body;
   if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
@@ -243,7 +215,6 @@ app.post('/api/auth/admin-login', async (req, res) => {
   res.status(401).json({ message: 'Invalid admin credentials.' });
 });
 
-// Forgot password – send OTP
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -263,12 +234,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       html: `<h2>Reset Your Password</h2><p>Your OTP is: <strong>${otp}</strong></p><p>Expires in 10 minutes.</p>`
     });
     res.json({ message: 'OTP sent to your email.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// Verify reset OTP
 app.post('/api/auth/verify-reset-otp', async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -279,12 +247,9 @@ app.post('/api/auth/verify-reset-otp', async (req, res) => {
     record.verified = true;
     await record.save();
     res.json({ message: 'OTP verified.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// Reset password
 app.post('/api/auth/reset-password', async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -297,50 +262,40 @@ app.post('/api/auth/reset-password', async (req, res) => {
     await user.save();
     await OTP.deleteMany({ email, purpose: 'reset' });
     res.json({ message: 'Password updated. You can now login.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ---------- COURSES ROUTES (public) ----------
-// Get all courses (with enrollment count)
+// ---------- COURSES ROUTES ----------
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
-  for (let c of courses) {
-    c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
-  }
+  for (let c of courses) c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
   res.json(courses);
 });
 
-// Enroll in a course (auth)
 app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   const { courseId } = req.body;
   const userEmail = req.user.email;
   if (await Enrollment.findOne({ userEmail, courseId }))
     return res.status(400).json({ message: 'Already enrolled.' });
   await new Enrollment({ userEmail, courseId }).save();
-  res.status(201).json({ message: 'Enrolled successfully.' });
+  res.status(201).json({ message: 'Enrolled.' });
 });
 
-// My enrollments (auth) – defined BEFORE /:id to avoid casting error
 app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
   const enrollments = await Enrollment.find({ userEmail: req.user.email }).populate('courseId').lean();
   const courses = enrollments.map(e => e.courseId).filter(Boolean);
-  for (let c of courses) {
-    c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
-  }
+  for (let c of courses) c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
   res.json(courses);
 });
 
-// Get single course (with enrollment count) – AFTER specific routes
 app.get('/api/courses/:id', async (req, res) => {
   const course = await Course.findById(req.params.id).lean();
-  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  if (!course) return res.status(404).json({ message: 'Not found.' });
   course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
   res.json(course);
 });
 
-// ---------- PROGRESS ROUTES ----------
+// ---------- PROGRESS ----------
 app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, async (req, res) => {
   try {
     const { courseId, lectureId } = req.params;
@@ -349,28 +304,48 @@ app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, asy
       return res.status(400).json({ message: 'Already completed.' });
     await new LectureProgress({ userEmail, courseId, lectureId }).save();
     res.json({ message: 'Lecture marked as complete.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
 app.get('/api/progress/:courseId', authMiddleware, async (req, res) => {
-  const progress = await LectureProgress.find({
-    userEmail: req.user.email,
-    courseId: req.params.courseId
-  });
+  const progress = await LectureProgress.find({ userEmail: req.user.email, courseId: req.params.courseId });
   res.json(progress.map(p => p.lectureId));
 });
 
-// ---------- DOUBTS ROUTES ----------
+app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
+  try {
+    const completions = await LectureProgress.find({ userEmail: req.user.email })
+      .populate({ path: 'courseId', select: 'title lectures' })
+      .sort({ completedAt: -1 })
+      .lean();
+    const enriched = await Promise.all(completions.map(async (c) => {
+      const course = c.courseId;
+      const lecture = course.lectures.find(l => l._id.toString() === c.lectureId);
+      return {
+        courseTitle: course.title,
+        lectureTitle: lecture ? lecture.title : 'Unknown Lecture',
+        completedAt: c.completedAt
+      };
+    }));
+    res.json(enriched);
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
+});
+
+// ---------- DOUBTS ----------
 app.post('/api/doubts', authMiddleware, async (req, res) => {
   try {
     const { courseId, lectureId, message } = req.body;
-    await new Doubt({ userEmail: req.user.email, courseId, lectureId, message }).save();
+    const user = await User.findOne({ email: req.user.email });
+    const doubt = new Doubt({
+      userEmail: req.user.email,
+      userName: user ? user.name : req.user.email,
+      courseId,
+      lectureId,
+      message
+    });
+    await doubt.save();
     res.status(201).json({ message: 'Doubt submitted.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
 app.get('/api/doubts/my', authMiddleware, async (req, res) => {
@@ -386,23 +361,18 @@ app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   res.json({ totalCourses, totalStudents, totalEnrollments });
 });
 
-// Course CRUD
 app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   try {
     const { title, description, price, originalPrice, imageUrl, lectures } = req.body;
     const course = new Course({
-      title,
-      description,
-      price,
+      title, description, price,
       originalPrice: originalPrice || null,
       imageUrl: imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600',
       lectures: lectures || []
     });
     await course.save();
     res.status(201).json(course);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
 app.put('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
@@ -415,9 +385,7 @@ app.put('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
     );
     if (!updated) return res.status(404).json({ message: 'Course not found.' });
     res.json(updated);
-  } catch (err) {
-    res.status(500).json({ message: 'Update failed.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Update failed.' }); }
 });
 
 app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
@@ -426,7 +394,7 @@ app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   res.json({ message: 'Course deleted.' });
 });
 
-// Lecture management (dedicated endpoints)
+// Lecture management
 app.get('/api/admin/lectures/:courseId', adminMiddleware, async (req, res) => {
   const course = await Course.findById(req.params.courseId);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
@@ -459,7 +427,7 @@ app.delete('/api/admin/lectures/:courseId/:lectureId', adminMiddleware, async (r
   res.json(course.lectures);
 });
 
-// Doubt management (admin)
+// Admin doubts (with student names)
 app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
   const doubts = await Doubt.find().sort({ createdAt: -1 }).lean();
   res.json(doubts);
@@ -471,14 +439,15 @@ app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
     const doubt = await Doubt.findByIdAndUpdate(req.params.id, { adminReply }, { new: true });
     if (!doubt) return res.status(404).json({ message: 'Doubt not found.' });
     res.json(doubt);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// Students list & assign course
+// Students list with progress count
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
-  const students = await User.find({}, 'name email phone');
+  const students = await User.find({}, 'name email phone').lean();
+  for (let s of students) {
+    s.completedLectures = await LectureProgress.countDocuments({ userEmail: s.email });
+  }
   res.json(students);
 });
 
@@ -490,16 +459,11 @@ app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Already enrolled.' });
     await new Enrollment({ userEmail, courseId }).save();
     res.status(201).json({ message: 'Assigned.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
 // ---------- FRONTEND FALLBACK ----------
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-// ---------- START SERVER ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
