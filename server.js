@@ -66,18 +66,18 @@ otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const OTP = mongoose.model('OTP', otpSchema);
 
 const lectureProgressSchema = new mongoose.Schema({
-  userEmail: { type: String, required: true },
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
-  lectureId: { type: String, required: true },
+  userEmail: String,
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+  lectureId: String,
   completedAt: { type: Date, default: Date.now }
 });
 const LectureProgress = mongoose.model('LectureProgress', lectureProgressSchema);
 
 const doubtSchema = new mongoose.Schema({
-  userEmail: { type: String, required: true },
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
-  lectureId: { type: String, required: true },
-  message: { type: String, required: true },
+  userEmail: String,
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+  lectureId: String,
+  message: String,
   adminReply: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 });
@@ -115,7 +115,6 @@ const ALLOWED_DOMAINS = [
   'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
   'aol.com', 'icloud.com', 'protonmail.com', 'zoho.com', 'yandex.com', 'mail.com'
 ];
-
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ---------- AUTH ROUTES ----------
@@ -135,7 +134,7 @@ app.post('/api/auth/send-otp',
 
       await OTP.deleteMany({ email, purpose: 'registration' });
       const otp = generateOTP();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
       await new OTP({ email, otp, expiresAt, purpose: 'registration' }).save();
 
       await transporter.sendMail({
@@ -323,7 +322,7 @@ app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   res.status(201).json({ message: 'Enrolled successfully.' });
 });
 
-// My enrollments (auth) – MUST be before /:id
+// My enrollments (auth) – defined BEFORE /:id to avoid casting error
 app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
   const enrollments = await Enrollment.find({ userEmail: req.user.email }).populate('courseId').lean();
   const courses = enrollments.map(e => e.courseId).filter(Boolean);
@@ -380,7 +379,6 @@ app.get('/api/doubts/my', authMiddleware, async (req, res) => {
 });
 
 // ---------- ADMIN ROUTES ----------
-// Dashboard stats
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   const totalCourses = await Course.countDocuments();
   const totalStudents = await User.countDocuments({ isVerified: true });
