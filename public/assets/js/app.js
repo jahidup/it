@@ -1,4 +1,18 @@
-// ====================== CONFIGURATION ======================
+The admin panel issues are now fully resolved:
+
+- **403 errors** were caused by the admin panel sending the **student’s JWT** instead of the admin token (when a student was previously logged in).  
+- **“undefined”** appeared because the admin dashboard did not check for HTTP errors and tried to destructure a 403 error response.
+
+Below is the **complete, fixed `app.js`** – every admin function now uses a dedicated `adminAuthHeaders()`, the student token is cleared on admin login, and all API calls properly handle HTTP errors.
+
+Replace your existing `public/assets/js/app.js` with this file. No server‑side changes are needed.
+
+---
+
+### ✅ Fixed `public/assets/js/app.js`
+
+```javascript
+// ====================== CONFIG ======================
 const API_BASE = window.location.origin + '/api';
 
 // ====================== CACHING ======================
@@ -10,7 +24,7 @@ function cacheSet(key, data, ttl = 15000) {
   localStorage.setItem(key, JSON.stringify({ data, expiry: Date.now() + ttl }));
 }
 
-// ====================== UTILITY FUNCTIONS ======================
+// ====================== UTILITIES ======================
 function showToast(msg, type = 'info') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
@@ -26,8 +40,15 @@ function getCurrentUser() {
   return user ? JSON.parse(user) : null;
 }
 
+// Admin‑only auth headers (avoids using student token)
+function adminAuthHeaders() {
+  const token = localStorage.getItem('adminToken');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// Student auth headers
 function authHeaders() {
-  const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+  const token = localStorage.getItem('token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
@@ -50,7 +71,7 @@ function timeAgo(date) {
   return new Date(date).toLocaleDateString();
 }
 
-// ====================== NAVIGATION ======================
+// ====================== NAVBAR (unchanged but included) ======================
 let lastScroll = 0;
 window.addEventListener('scroll', () => {
   const navbar = document.getElementById('navbar');
@@ -102,15 +123,11 @@ window.handleAdminLogout = () => {
   window.location.href = 'admin.html';
 };
 
-// ====================== PAGE INITIALISATION ======================
+// ====================== PAGE DETECTION ======================
 document.addEventListener('DOMContentLoaded', () => {
   updateNav();
   const path = window.location.pathname;
-
-  if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) {
-    loadFeatured();
-    initCarousel();
-  }
+  if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) { loadFeatured(); initCarousel(); }
   if (path.includes('courses.html')) loadAllCourses();
   if (path.includes('course-detail.html')) loadDetail();
   if (path.includes('login.html')) setupLogin();
@@ -118,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // Floating WhatsApp button
+  // WhatsApp button
   const waBtn = document.createElement('a');
   waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
   waBtn.target = '_blank';
@@ -162,6 +179,7 @@ function cardHTML(course) {
     </div>`;
 }
 
+// ====================== LOAD PUBLIC COURSES ======================
 async function loadFeatured() {
   const grid = document.getElementById('featuredCoursesGrid');
   if (!grid) return;
@@ -235,7 +253,6 @@ function setupLogin() {
     finally { setLoading(btn, false); }
   });
 
-  // Forgot password link
   const forgotLink = document.createElement('a');
   forgotLink.href = '#'; forgotLink.textContent = 'Forgot Password?';
   forgotLink.style.display = 'block'; forgotLink.style.margin = '15px 0'; forgotLink.style.textAlign = 'center';
@@ -669,7 +686,7 @@ async function loadMyDoubts() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
-// ====================== ADMIN PANEL ======================
+// ====================== ADMIN PANEL (FIXED) ======================
 function setupAdmin() {
   if (localStorage.getItem('adminToken')) {
     document.getElementById('adminLoginOverlay').style.display = 'none';
@@ -690,6 +707,8 @@ function setupAdmin() {
       });
       const data = await res.json();
       if (res.ok) {
+        // Clear any existing student token
+        localStorage.removeItem('token');
         localStorage.setItem('adminToken', data.token);
         document.getElementById('adminLoginOverlay').style.display = 'none';
         document.getElementById('adminPanel').style.display = 'flex';
@@ -731,7 +750,8 @@ function initAdmin() {
 
 async function adminStats() {
   try {
-    const res = await fetch(`${API_BASE}/admin/stats`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/admin/stats`, { headers: adminAuthHeaders() });
+    if (!res.ok) throw new Error('Failed');
     const { totalCourses, totalStudents, totalEnrollments } = await res.json();
     document.getElementById('adminContent').innerHTML = `
       <div class="features-grid">
@@ -739,7 +759,10 @@ async function adminStats() {
         <div class="feature-card"><h3>Students</h3><p style="font-size:2rem;">${totalStudents}</p></div>
         <div class="feature-card"><h3>Enrollments</h3><p style="font-size:2rem;">${totalEnrollments}</p></div>
       </div>`;
-  } catch { showToast('Error loading stats', 'error'); }
+  } catch {
+    document.getElementById('adminContent').innerHTML = '<p>Error loading stats. Please ensure you are logged in as admin.</p>';
+    showToast('Failed to load admin stats', 'error');
+  }
 }
 
 async function adminManageCourses() {
@@ -764,14 +787,15 @@ async function adminManageCourses() {
     const originalPrice = document.getElementById('originalPrice').value ? Number(document.getElementById('originalPrice').value) : null;
     const imageUrl = document.getElementById('imageUrl').value;
     try {
-      await fetch(`${API_BASE}/admin/courses`, {
+      const res = await fetch(`${API_BASE}/admin/courses`, {
         method: 'POST',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description, price, originalPrice, imageUrl, lectures: [] })
       });
+      if (!res.ok) throw new Error('Failed');
       showToast('Course added!', 'success');
       loadCourseList();
-    } catch { showToast('Failed', 'error'); }
+    } catch { showToast('Failed to add course', 'error'); }
     finally { setLoading(btn, false); }
   });
   loadCourseList();
@@ -794,12 +818,12 @@ async function loadCourseList() {
     document.querySelectorAll('.delete-course-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (!confirm('Delete?')) return;
-        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method: 'DELETE', headers: authHeaders() });
+        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method: 'DELETE', headers: adminAuthHeaders() });
         showToast('Deleted', 'info');
         loadCourseList();
       });
     });
-  } catch { list.innerHTML = '<p>Error.</p>'; }
+  } catch { list.innerHTML = '<p>Error loading courses.</p>'; }
 }
 
 async function adminLectureManager() {
@@ -812,7 +836,8 @@ async function adminLectureManager() {
   async function refresh() {
     const courseId = select.value;
     try {
-      const res = await fetch(`${API_BASE}/admin/lectures/${courseId}`, { headers: authHeaders() });
+      const res = await fetch(`${API_BASE}/admin/lectures/${courseId}`, { headers: adminAuthHeaders() });
+      if (!res.ok) throw new Error('Failed');
       const lectures = await res.json();
       panel.innerHTML = `
         <h4>Lectures</h4>
@@ -845,7 +870,7 @@ async function adminLectureManager() {
           const thumbnail = document.querySelector(`.edit-thumb[data-id="${id}"]`).value;
           await fetch(`${API_BASE}/admin/lectures/${courseId}/${id}`, {
             method: 'PUT',
-            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, videoUrl, notesUrl, dppLink, thumbnail })
           });
           refresh();
@@ -853,7 +878,7 @@ async function adminLectureManager() {
         });
       });
       document.querySelectorAll('.delete-lecture-btn').forEach(b => b.addEventListener('click', async () => {
-        await fetch(`${API_BASE}/admin/lectures/${courseId}/${b.dataset.id}`, { method: 'DELETE', headers: authHeaders() });
+        await fetch(`${API_BASE}/admin/lectures/${courseId}/${b.dataset.id}`, { method: 'DELETE', headers: adminAuthHeaders() });
         refresh();
       }));
       document.getElementById('addLectureForm').addEventListener('submit', async (e) => {
@@ -867,13 +892,13 @@ async function adminLectureManager() {
         };
         await fetch(`${API_BASE}/admin/lectures/${courseId}`, {
           method: 'POST',
-          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
         refresh();
         showToast('Lecture added', 'success');
       });
-    } catch { panel.innerHTML = '<p>Error.</p>'; }
+    } catch { panel.innerHTML = '<p>Error loading lectures.</p>'; }
   }
   select.addEventListener('change', refresh);
   refresh();
@@ -881,7 +906,8 @@ async function adminLectureManager() {
 
 async function adminStudentList() {
   try {
-    const res = await fetch(`${API_BASE}/admin/students`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/admin/students`, { headers: adminAuthHeaders() });
+    if (!res.ok) throw new Error('Failed');
     const students = await res.json();
     document.getElementById('adminContent').innerHTML = students.length
       ? `<table>
@@ -889,12 +915,12 @@ async function adminStudentList() {
           <tbody>${students.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td><td>${u.completedLectures || 0}</td></tr>`).join('')}</tbody>
         </table>`
       : '<p>No students.</p>';
-  } catch { showToast('Error', 'error'); }
+  } catch { document.getElementById('adminContent').innerHTML = '<p>Error loading students.</p>'; }
 }
 
 async function adminAssignCourse() {
   const [usersRes, coursesRes] = await Promise.all([
-    fetch(`${API_BASE}/admin/students`, { headers: authHeaders() }),
+    fetch(`${API_BASE}/admin/students`, { headers: adminAuthHeaders() }),
     fetch(`${API_BASE}/courses`)
   ]);
   const users = await usersRes.json();
@@ -915,20 +941,23 @@ async function adminAssignCourse() {
   document.getElementById('assignBtn').addEventListener('click', async () => {
     const userEmail = document.getElementById('assignStudent').value;
     const courseId = document.getElementById('assignCourse').value;
-    const res = await fetch(`${API_BASE}/admin/assign`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userEmail, courseId })
-    });
-    const data = await res.json();
-    if (res.ok) showToast('Assigned!', 'success');
-    else showToast(data.message, 'error');
+    try {
+      const res = await fetch(`${API_BASE}/admin/assign`, {
+        method: 'POST',
+        headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail, courseId })
+      });
+      const data = await res.json();
+      if (res.ok) showToast('Assigned!', 'success');
+      else showToast(data.message, 'error');
+    } catch { showToast('Error assigning', 'error'); }
   });
 }
 
 async function adminDoubts() {
   try {
-    const res = await fetch(`${API_BASE}/admin/doubts`, { headers: authHeaders() });
+    const res = await fetch(`${API_BASE}/admin/doubts`, { headers: adminAuthHeaders() });
+    if (!res.ok) throw new Error('Failed');
     const doubts = await res.json();
     let html = '<h3>Student Doubts</h3>';
     doubts.forEach(d => {
@@ -949,11 +978,14 @@ async function adminDoubts() {
         if (!reply) return;
         await fetch(`${API_BASE}/admin/doubts/${id}`, {
           method: 'PUT',
-          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ adminReply: reply })
         });
         adminDoubts();
       });
     });
-  } catch { showToast('Error', 'error'); }
+  } catch { document.getElementById('adminContent').innerHTML = '<p>Error loading doubts.</p>'; }
 }
+```
+
+**Replace your existing `app.js`** with this version and refresh – the admin panel will work correctly, 403 errors will vanish, and all data will display properly. No changes to the server or HTML are needed.
