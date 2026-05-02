@@ -1,11 +1,10 @@
 // ====================== CONFIG ======================
 const API_BASE = window.location.origin + '/api';
 
-// ====================== SIMPLE CACHE ======================
+// ====================== CACHE ======================
 function cacheGet(key) {
   const entry = JSON.parse(localStorage.getItem(key));
-  if (!entry || Date.now() > entry.expiry) return null;
-  return entry.data;
+  return entry && Date.now() < entry.expiry ? entry.data : null;
 }
 function cacheSet(key, data, ttl = 15000) {
   localStorage.setItem(key, JSON.stringify({ data, expiry: Date.now() + ttl }));
@@ -64,7 +63,6 @@ window.addEventListener('scroll', () => {
   lastScroll = currentScroll;
 });
 
-// ====================== NAVIGATION UPDATE ======================
 function updateNav() {
   const user = getCurrentUser();
   const ids = {
@@ -93,7 +91,6 @@ function updateNav() {
   if (toggle) toggle.onclick = () => links.classList.toggle('active');
 }
 
-// ====================== GLOBAL LOGOUT ======================
 window.handleLogout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('currentUser');
@@ -110,11 +107,7 @@ window.handleAdminLogout = () => {
 document.addEventListener('DOMContentLoaded', () => {
   updateNav();
   const path = window.location.pathname;
-
-  if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) {
-    loadFeatured();
-    initCarousel();
-  }
+  if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) { loadFeatured(); initCarousel(); }
   if (path.includes('courses.html')) loadAllCourses();
   if (path.includes('course-detail.html')) loadDetail();
   if (path.includes('login.html')) setupLogin();
@@ -122,7 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // Floating WhatsApp button
   const waBtn = document.createElement('a');
   waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
   waBtn.target = '_blank';
@@ -156,12 +148,10 @@ function cardHTML(course) {
   const disc = course.originalPrice && course.originalPrice > course.price
     ? `<span class="original-price">₹${course.originalPrice}</span> <span class="discount-badge">${Math.round((1 - course.price / course.originalPrice) * 100)}% off</span>`
     : '';
-  const enrolled = course.enrollmentCount
-    ? `👥 ${course.enrollmentCount} enrolled`
-    : '👥 Be the first';
+  const enrolled = course.enrollmentCount ? `👥 ${course.enrollmentCount} enrolled` : '👥 Be the first';
   return `
     <div class="course-card">
-      <img src="${course.imageUrl}" alt="${course.title}" style="width:100%; height:180px; object-fit:cover; border-radius:12px 12px 0 0;">
+      <img src="${course.imageUrl}" alt="${course.title}" style="width:100%; height:180px; object-fit:cover;">
       <h3>${course.title}</h3>
       <p>${course.description}</p>
       <div class="price-container"><span class="price">₹${course.price}</span>${disc}</div>
@@ -210,7 +200,7 @@ async function loadDetail() {
       </div>`;
     document.getElementById('buyNowBtn').addEventListener('click', () => {
       const user = getCurrentUser();
-      if (!user) { showToast('Please login first', 'error'); location.href = 'login.html'; return; }
+      if (!user) { showToast('Please login first', 'error'); location.href='login.html'; return; }
       const msg = `Hello Admin,\nName: ${user.name}\nEmail: ${user.email}\nCourse: ${course.title}`;
       window.open(`https://wa.me/+918055698328?text=${encodeURIComponent(msg)}`, '_blank');
     });
@@ -239,15 +229,15 @@ function setupLogin() {
         localStorage.setItem('currentUser', JSON.stringify(data.user));
         showToast('Login successful!', 'success');
         location.href = 'dashboard.html';
-      } else showToast(data.message || 'Login failed', 'error');
+      } else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(btn, false); }
   });
 
   const forgotLink = document.createElement('a');
   forgotLink.href = '#'; forgotLink.textContent = 'Forgot Password?';
-  forgotLink.style.display = 'block'; forgotLink.style.margin = '15px 0'; forgotLink.style.textAlign = 'center';
-  forgotLink.style.color = '#0ea5e9'; forgotLink.style.cursor = 'pointer';
+  forgotLink.style.display='block'; forgotLink.style.margin='15px 0'; forgotLink.style.textAlign='center';
+  forgotLink.style.color='#0ea5e9'; forgotLink.style.cursor='pointer';
   form.appendChild(forgotLink);
   forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgotPasswordModal(); });
 }
@@ -258,60 +248,45 @@ function showForgotPasswordModal() {
   modal.innerHTML = `
     <div class="modal-content" style="max-width:400px; padding:25px;">
       <h3>Reset Password</h3>
-      <input type="email" id="forgotEmail" placeholder="Your email" required style="width:100%; margin:10px 0; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0;">
+      <input type="email" id="forgotEmail" placeholder="Your email" required style="width:100%; margin:10px 0; padding:10px; border-radius:8px; border:1px solid #334155; background:#1a1f2e; color:#e2e8f0;">
       <button class="btn btn-primary btn-full" id="sendForgotOtp">Send OTP</button>
       <div id="forgotOtpSection" style="display:none; margin-top:15px;">
-        <input type="text" id="forgotOtp" placeholder="Enter OTP" style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; margin-bottom:10px;">
+        <input type="text" id="forgotOtp" placeholder="Enter OTP" style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#1a1f2e; color:#e2e8f0; margin-bottom:10px;">
         <button class="btn btn-outline btn-full" id="verifyForgotOtp">Verify OTP</button>
         <div id="newPasswordSection" style="display:none; margin-top:10px;">
-          <input type="password" id="newPassword" placeholder="New password" style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; margin-bottom:10px;">
+          <input type="password" id="newPassword" placeholder="New password" style="width:100%; padding:10px; border-radius:8px; border:1px solid #334155; background:#1a1f2e; color:#e2e8f0; margin-bottom:10px;">
           <button class="btn btn-primary btn-full" id="resetPasswordBtn">Reset Password</button>
         </div>
       </div>
       <button class="btn btn-outline btn-full" id="closeForgotModal" style="margin-top:10px;">Cancel</button>
     </div>`;
   document.body.appendChild(modal);
-
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
   document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     if (!email) return showToast('Enter email', 'error');
     setLoading(document.getElementById('sendForgotOtp'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
+      const res = await fetch(`${API_BASE}/auth/forgot-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email}) });
       const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, 'success');
-        document.getElementById('forgotOtpSection').style.display = 'block';
-      } else showToast(data.message, 'error');
+      if (res.ok) { showToast(data.message, 'success'); document.getElementById('forgotOtpSection').style.display='block'; }
+      else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('sendForgotOtp'), false); }
   });
-
   document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
     if (!otp) return showToast('Enter OTP', 'error');
     setLoading(document.getElementById('verifyForgotOtp'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
-      });
+      const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,otp}) });
       const data = await res.json();
-      if (res.ok) {
-        showToast('OTP verified!', 'success');
-        document.getElementById('newPasswordSection').style.display = 'block';
-      } else showToast(data.message, 'error');
+      if (res.ok) { showToast('OTP verified!', 'success'); document.getElementById('newPasswordSection').style.display='block'; }
+      else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('verifyForgotOtp'), false); }
   });
-
   document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -319,16 +294,10 @@ function showForgotPasswordModal() {
     if (!newPassword) return showToast('Enter new password', 'error');
     setLoading(document.getElementById('resetPasswordBtn'), true);
     try {
-      const res = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp, newPassword })
-      });
+      const res = await fetch(`${API_BASE}/auth/reset-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,otp,newPassword}) });
       const data = await res.json();
-      if (res.ok) {
-        showToast('Password reset! Please login.', 'success');
-        modal.remove();
-      } else showToast(data.message, 'error');
+      if (res.ok) { showToast('Password reset! Please login.', 'success'); modal.remove(); }
+      else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('resetPasswordBtn'), false); }
   });
@@ -342,44 +311,31 @@ function setupRegister() {
   const regForm = document.getElementById('registerForm');
   const regBtn = document.getElementById('registerBtn');
   if (!sendBtn || !verifyBtn || !regForm) return;
-
   sendBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value.trim();
     if (!email) return showToast('Enter email first', 'error');
     setLoading(sendBtn, true);
     try {
-      const res = await fetch(`${API_BASE}/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
+      const res = await fetch(`${API_BASE}/auth/send-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email}) });
       const data = await res.json();
-      if (res.ok) {
-        showToast(data.message, 'success');
-        document.getElementById('otpSection').style.display = 'block';
-      } else showToast(data.message, 'error');
+      if (res.ok) { showToast(data.message, 'success'); document.getElementById('otpSection').style.display='block'; }
+      else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(sendBtn, false); }
   });
-
   verifyBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value.trim();
     const otp = document.getElementById('otp').value.trim();
     if (!otp) return showToast('Enter OTP', 'error');
     setLoading(verifyBtn, true);
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
-      });
+      const res = await fetch(`${API_BASE}/auth/verify-otp`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,otp}) });
       const data = await res.json();
       if (res.ok) { otpVerified = true; showToast('OTP verified!', 'success'); regBtn.disabled = false; }
       else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(verifyBtn, false); }
   });
-
   regForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!otpVerified) return showToast('Verify OTP first', 'error');
@@ -390,11 +346,7 @@ function setupRegister() {
     const password = document.getElementById('password').value;
     const otp = document.getElementById('otp').value.trim();
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, password, otp })
-      });
+      const res = await fetch(`${API_BASE}/auth/register`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,email,phone,password,otp}) });
       const data = await res.json();
       if (res.ok) {
         localStorage.setItem('token', data.token);
@@ -412,7 +364,6 @@ function setupDashboard() {
   const user = getCurrentUser();
   if (!user) { location.href = 'login.html'; return; }
   document.getElementById('topbarUser').textContent = user.name;
-
   const sidebar = document.getElementById('sidebar');
   const toggleBtn = document.getElementById('sidebarToggle');
   if (!sidebar.querySelector('.close-sidebar')) {
@@ -422,7 +373,6 @@ function setupDashboard() {
     sidebar.prepend(closeBtn);
   }
   toggleBtn.onclick = () => sidebar.classList.toggle('active');
-
   document.querySelectorAll('.sidebar-link').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
@@ -435,7 +385,6 @@ function setupDashboard() {
       else if (view === 'myDoubts') loadMyDoubts();
     });
   });
-
   loadDashboardHome();
 }
 
@@ -443,8 +392,7 @@ async function loadDashboardHome() {
   try {
     const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
     const courses = await res.json();
-    const count = Array.isArray(courses) ? courses.length : 0;
-    document.getElementById('dashboardContent').innerHTML = `<h2>Welcome, ${getCurrentUser().name}!</h2><p>Enrolled in <strong>${count}</strong> course(s).</p>`;
+    document.getElementById('dashboardContent').innerHTML = `<h2>Welcome, ${getCurrentUser().name}!</h2><p>Enrolled in <strong>${courses.length}</strong> course(s).</p>`;
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
@@ -458,7 +406,7 @@ async function loadMyCourses() {
       cacheSet('my-enrollments', courses, 15000);
     }
     if (!courses.length) {
-      document.getElementById('dashboardContent').innerHTML = '<p>No enrolled courses.</p>';
+      document.getElementById('dashboardContent').innerHTML = '<p>No enrolled courses yet.</p>';
       return;
     }
     let html = `<h3>My Courses</h3><div class="compact-course-list">`;
@@ -519,13 +467,9 @@ async function viewCourseLectures(courseId) {
     document.querySelector('.back-to-courses-btn').addEventListener('click', loadMyCourses);
     document.querySelectorAll('.mark-complete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const lectureId = btn.dataset.lectureId;
         setLoading(btn, true);
-        await fetch(`${API_BASE}/progress/mark-complete/${courseId}/${lectureId}`, {
-          method: 'POST',
-          headers: authHeaders()
-        });
-        showToast('Marked as complete', 'success');
+        await fetch(`${API_BASE}/progress/mark-complete/${courseId}/${btn.dataset.lectureId}`, { method: 'POST', headers: authHeaders() });
+        showToast('Marked complete', 'success');
         viewCourseLectures(courseId);
         setLoading(btn, false);
       });
@@ -542,7 +486,7 @@ function openDoubtModal(courseId, lectureId) {
   modal.innerHTML = `
     <div class="modal-content" style="max-width:450px;">
       <h3>Ask a Doubt</h3>
-      <textarea id="doubtMsg" rows="3" placeholder="Type your doubt..." style="width:100%; margin-bottom:10px; background:#0f172a; color:#e2e8f0; border:1px solid #334155; border-radius:8px; padding:10px;"></textarea>
+      <textarea id="doubtMsg" rows="3" placeholder="Type your doubt..." style="width:100%; background:#1a1f2e; color:#e2e8f0; border:1px solid #334155; padding:10px; border-radius:8px; margin-bottom:10px;"></textarea>
       <button class="btn btn-primary" id="submitDoubtBtn">Submit</button>
       <button class="btn btn-outline" id="closeDoubtModal">Cancel</button>
     </div>`;
@@ -672,9 +616,9 @@ async function adminStats() {
     const { totalCourses, totalStudents, totalEnrollments } = await res.json();
     document.getElementById('adminContent').innerHTML = `
       <div class="features-grid">
-        <div class="feature-card"><h3>Courses</h3><p style="font-size:2rem;">${totalCourses}</p></div>
-        <div class="feature-card"><h3>Students</h3><p style="font-size:2rem;">${totalStudents}</p></div>
-        <div class="feature-card"><h3>Enrollments</h3><p style="font-size:2rem;">${totalEnrollments}</p></div>
+        <div class="feature-card"><h3>Courses</h3><p class="stat-number">${totalCourses}</p></div>
+        <div class="feature-card"><h3>Students</h3><p class="stat-number">${totalStudents}</p></div>
+        <div class="feature-card"><h3>Enrollments</h3><p class="stat-number">${totalEnrollments}</p></div>
       </div>`;
   } catch { showToast('Error loading stats', 'error'); }
 }
@@ -682,10 +626,10 @@ async function adminStats() {
 async function adminManageCourses() {
   let html = `
     <h3>Add Course</h3>
-    <form id="addCourseForm" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
+    <form id="addCourseForm" class="admin-form">
       <input type="text" id="title" placeholder="Title" required>
       <input type="text" id="desc" placeholder="Description" required>
-      <input type="number" id="price" placeholder="Selling Price" required>
+      <input type="number" id="price" placeholder="Price" required>
       <input type="number" id="originalPrice" placeholder="Original Price">
       <input type="text" id="imageUrl" placeholder="Image URL" value="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600">
       <button type="submit" class="btn btn-primary">Add</button>
@@ -707,7 +651,7 @@ async function adminManageCourses() {
         body: JSON.stringify({ title, description, price, originalPrice, imageUrl, lectures: [] })
       });
       showToast('Course added!', 'success'); loadCourseList();
-    } catch { showToast('Failed', 'error'); }
+    } catch { showToast('Failed to add course', 'error'); }
     finally { setLoading(btn, false); }
   });
   loadCourseList();
@@ -720,39 +664,46 @@ async function loadCourseList() {
     const res = await fetch(`${API_BASE}/courses`);
     const courses = await res.json();
     list.innerHTML = courses.map(c => `
-      <div class="course-card" style="margin-bottom:15px;">
-        <img src="${c.imageUrl}" style="height:120px; object-fit:cover; border-radius:8px;">
-        <h3>${c.title}</h3>
-        <p>${c.description}</p>
-        <div>₹${c.price} ${c.originalPrice ? `<span class="original-price">₹${c.originalPrice}</span>` : ''}</div>
+      <div class="admin-course-card">
+        <img src="${c.imageUrl}" alt="${c.title}" style="width:80px; height:60px; object-fit:cover; border-radius:6px;">
+        <div style="flex:1;">
+          <h4>${c.title}</h4>
+          <p>${c.description}</p>
+          <div class="course-pricing"><span class="price">₹${c.price}</span>${c.originalPrice ? `<span class="original-price">₹${c.originalPrice}</span>` : ''}</div>
+        </div>
         <button class="btn btn-danger delete-course-btn" data-id="${c._id}">Delete</button>
       </div>`).join('');
     document.querySelectorAll('.delete-course-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
-        if (!confirm('Delete?')) return;
+        if (!confirm('Delete this course?')) return;
         await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method: 'DELETE', headers: authHeaders() });
-        showToast('Deleted', 'info'); loadCourseList();
+        showToast('Course deleted', 'info');
+        loadCourseList();
       });
     });
-  } catch { list.innerHTML = '<p>Error.</p>'; }
+  } catch { list.innerHTML = '<p>Error loading courses.</p>'; }
 }
 
 async function adminLectureManager() {
   const res = await fetch(`${API_BASE}/courses`);
   const courses = await res.json();
-  let html = `<h3>Manage Lectures</h3><select id="lectureCourseSelect">${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}</select><div id="lectureManagerPanel"></div>`;
+  let html = `
+    <h3>Manage Lectures</h3>
+    <select id="lectureCourseSelect" class="admin-select">${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}</select>
+    <div id="lectureManagerPanel"></div>`;
   document.getElementById('adminContent').innerHTML = html;
   const select = document.getElementById('lectureCourseSelect');
   const panel = document.getElementById('lectureManagerPanel');
+
   async function refresh() {
     const courseId = select.value;
     try {
       const res = await fetch(`${API_BASE}/admin/lectures/${courseId}`, { headers: authHeaders() });
       const lectures = await res.json();
       panel.innerHTML = `
-        <h4>Lectures</h4>
+        <h4>Current Lectures</h4>
         ${lectures.map(l => `
-          <div class="lecture-item">
+          <div class="lecture-edit-row">
             <input type="text" value="${l.title}" class="edit-title" data-id="${l._id}" placeholder="Title">
             <input type="text" value="${l.videoUrl}" class="edit-video" data-id="${l._id}" placeholder="Video URL">
             <input type="text" value="${l.notesUrl}" class="edit-notes" data-id="${l._id}" placeholder="Notes URL">
@@ -762,8 +713,8 @@ async function adminLectureManager() {
             <button class="btn btn-sm btn-danger delete-lecture-btn" data-id="${l._id}">Remove</button>
           </div>`).join('')}
         <h4>Add Lecture</h4>
-        <form id="addLectureForm">
-          <input type="text" id="lecTitle" placeholder="Title" required>
+        <form id="addLectureForm" class="admin-form">
+          <input type="text" id="lecTitle" placeholder="Topic" required>
           <input type="text" id="lecVideo" placeholder="YouTube URL" required>
           <input type="text" id="lecNotes" placeholder="Notes Link" required>
           <input type="text" id="lecDpp" placeholder="DPP Link">
@@ -773,15 +724,17 @@ async function adminLectureManager() {
       document.querySelectorAll('.save-lecture-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.dataset.id;
-          const title = document.querySelector(`.edit-title[data-id="${id}"]`).value;
-          const videoUrl = document.querySelector(`.edit-video[data-id="${id}"]`).value;
-          const notesUrl = document.querySelector(`.edit-notes[data-id="${id}"]`).value;
-          const dppLink = document.querySelector(`.edit-dpp[data-id="${id}"]`).value;
-          const thumbnail = document.querySelector(`.edit-thumb[data-id="${id}"]`).value;
+          const body = {
+            title: document.querySelector(`.edit-title[data-id="${id}"]`).value,
+            videoUrl: document.querySelector(`.edit-video[data-id="${id}"]`).value,
+            notesUrl: document.querySelector(`.edit-notes[data-id="${id}"]`).value,
+            dppLink: document.querySelector(`.edit-dpp[data-id="${id}"]`).value,
+            thumbnail: document.querySelector(`.edit-thumb[data-id="${id}"]`).value
+          };
           await fetch(`${API_BASE}/admin/lectures/${courseId}/${id}`, {
             method: 'PUT',
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, videoUrl, notesUrl, dppLink, thumbnail })
+            body: JSON.stringify(body)
           });
           refresh(); showToast('Lecture updated', 'success');
         });
@@ -799,10 +752,14 @@ async function adminLectureManager() {
           dppLink: document.getElementById('lecDpp').value,
           thumbnail: document.getElementById('lecThumbnail').value
         };
-        await fetch(`${API_BASE}/admin/lectures/${courseId}`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        await fetch(`${API_BASE}/admin/lectures/${courseId}`, {
+          method: 'POST',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
         refresh(); showToast('Lecture added', 'success');
       });
-    } catch { panel.innerHTML = '<p>Error.</p>'; }
+    } catch { panel.innerHTML = '<p>Error loading lectures.</p>'; }
   }
   select.addEventListener('change', refresh);
   refresh();
@@ -813,9 +770,9 @@ async function adminStudentList() {
     const res = await fetch(`${API_BASE}/admin/students`, { headers: authHeaders() });
     const students = await res.json();
     document.getElementById('adminContent').innerHTML = students.length
-      ? `<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead><tbody>${students.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td></tr>`).join('')}</tbody></table>`
-      : '<p>No students.</p>';
-  } catch { showToast('Error', 'error'); }
+      ? `<table class="admin-table"><thead><tr><th>Name</th><th>Email</th><th>Phone</th></tr></thead><tbody>${students.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.phone}</td></tr>`).join('')}</tbody></table>`
+      : '<p>No students registered.</p>';
+  } catch { showToast('Error loading students', 'error'); }
 }
 
 async function adminAssignCourse() {
@@ -826,10 +783,10 @@ async function adminAssignCourse() {
   const users = await usersRes.json();
   const courses = await coursesRes.json();
   let html = `
-    <h3>Assign Course</h3>
-    <input type="text" id="studentSearch" placeholder="Search student name/email" style="width:100%; margin-bottom:10px; padding:8px;">
-    <select id="assignStudent">${users.map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`).join('')}</select>
-    <select id="assignCourse">${courses.map(c => `<option value="${c._id}">${c.title} - ₹${c.price}</option>`).join('')}</select>
+    <h3>Assign Course to Student</h3>
+    <input type="text" id="studentSearch" placeholder="Search by name or email" class="admin-search">
+    <select id="assignStudent" class="admin-select">${users.map(u => `<option value="${u.email}">${u.name} (${u.email})</option>`).join('')}</select>
+    <select id="assignCourse" class="admin-select">${courses.map(c => `<option value="${c._id}">${c.title} - ₹${c.price}</option>`).join('')}</select>
     <button class="btn btn-primary" id="assignBtn">Assign</button>`;
   document.getElementById('adminContent').innerHTML = html;
   document.getElementById('studentSearch').addEventListener('input', (e) => {
@@ -860,18 +817,18 @@ async function adminDoubts() {
     doubts.forEach(d => {
       html += `
         <div class="doubt-card">
-          <p><strong>${d.userEmail}</strong> (${new Date(d.createdAt).toLocaleString()})</p>
+          <p><strong>${d.userEmail}</strong> • ${new Date(d.createdAt).toLocaleString()}</p>
           <p>${d.message}</p>
           ${d.adminReply ? `<p class="reply">↳ Admin: ${d.adminReply}</p>` : ''}
-          <input type="text" class="reply-input" data-id="${d._id}" placeholder="Reply..." style="width:100%; margin-top:8px; padding:6px;">
-          <button class="btn btn-xs btn-primary send-reply-btn" data-id="${d._id}" style="margin-top:5px;">Send Reply</button>
+          <input type="text" class="reply-input" data-id="${d._id}" placeholder="Type reply..." style="width:100%; margin-top:8px; padding:6px; background:#1a1f2e; border:1px solid #334155; color:#e2e8f0;">
+          <button class="btn btn-sm btn-primary send-reply-btn" data-id="${d._id}" style="margin-top:5px;">Reply</button>
         </div>`;
     });
     document.getElementById('adminContent').innerHTML = html;
     document.querySelectorAll('.send-reply-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
-        const reply = document.querySelector(`.reply-input[data-id="${id}"]`).value;
+        const reply = document.querySelector(`.reply-input[data-id="${id}"]`).value.trim();
         if (!reply) return;
         await fetch(`${API_BASE}/admin/doubts/${id}`, {
           method: 'PUT',
@@ -879,7 +836,8 @@ async function adminDoubts() {
           body: JSON.stringify({ adminReply: reply })
         });
         adminDoubts();
+        showToast('Reply sent', 'success');
       });
     });
-  } catch { showToast('Error', 'error'); }
+  } catch { showToast('Error loading doubts', 'error'); }
 }
