@@ -1,6 +1,7 @@
+```css
 /* ============================================================
-   SANKALP DIGITAL PATHSHALA – NETFLIX‑INSPIRED PREMIUM THEME
-   Sky‑blue accent · Light & trusted feel
+   SANKALP DIGITAL PATHSHALA – EXPERT PREMIUM STYLESHEET
+   Netflix‑inspired · Sky‑blue accent · Light, trusted feel
    ============================================================ */
 
 /* ---------- RESET & BASE ---------- */
@@ -260,10 +261,6 @@ img {
   opacity: 0.95;
   margin-bottom: 32px;
   animation: fadeInUp 0.8s ease;
-}
-
-.hero .btn {
-  animation: fadeInUp 1s ease;
 }
 
 .carousel-controls {
@@ -656,7 +653,7 @@ img {
   flex: 1;
 }
 
-/* ---------- COMPACT COURSE & LECTURE LIST (Student) ---------- */
+/* ---------- COMPACT COURSE LIST (Student) ---------- */
 .compact-course-list {
   display: flex;
   flex-direction: column;
@@ -689,6 +686,7 @@ img {
   color: #64748b;
 }
 
+/* ---------- STACKED LECTURE CARDS ---------- */
 .lecture-header {
   display: flex;
   align-items: center;
@@ -697,25 +695,25 @@ img {
   flex-wrap: wrap;
 }
 
-.lecture-list-compact {
+.lecture-list-stacked {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 12px;
 }
 
-.lecture-row {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 12px 18px;
+.lecture-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f5f9;
+}
+
+.lecture-info-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.02);
-  transition: background 0.2s;
-}
-
-.lecture-row:hover {
-  background: #f0f9ff;
+  margin-bottom: 10px;
 }
 
 .lecture-title {
@@ -728,6 +726,14 @@ img {
   font-size: 0.8rem;
   color: #94a3b8;
   margin-left: 8px;
+}
+
+.lecture-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .complete-badge {
@@ -753,6 +759,27 @@ img {
   background: linear-gradient(90deg, #0ea5e9, #38bdf8);
   transition: width 0.5s ease;
   border-radius: 10px;
+}
+
+/* ---------- PERFORMANCE REPORT ---------- */
+.report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-item {
+  background: white;
+  padding: 10px 15px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.04);
+}
+
+.report-date {
+  font-size: 0.9rem;
+  color: #64748b;
 }
 
 /* ---------- DOUBT CARDS ---------- */
@@ -993,7 +1020,7 @@ tr:hover {
 .lecture-item {
   background: #fff;
   border: 1px solid #e2e8f0;
-  padding: 15px;
+  padding: 12px;
   margin-bottom: 12px;
   border-radius: 14px;
   display: flex;
@@ -1097,3 +1124,4 @@ tr:hover {
     padding: 0 15px;
   }
 }
+```
