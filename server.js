@@ -9,18 +9,15 @@ const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
-
-// ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------- DATABASE ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ========== SCHEMAS ==========
+// ---------- SCHEMAS ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -92,16 +89,14 @@ const doubtSchema = new mongoose.Schema({
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ========== MIDDLEWARE ==========
+// ---------- MIDDLEWARE ----------
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided.' });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch (err) {
-    res.status(401).json({ message: 'Invalid token.' });
-  }
+  } catch (err) { res.status(401).json({ message: 'Invalid token.' }); }
 };
 
 const adminMiddleware = (req, res, next) => {
@@ -111,19 +106,12 @@ const adminMiddleware = (req, res, next) => {
   });
 };
 
-// ========== EMAIL SETUP ==========
+// ---------- EMAIL ----------
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
-
-const ALLOWED_DOMAINS = [
-  'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
-  'aol.com', 'icloud.com', 'protonmail.com', 'zoho.com', 'yandex.com', 'mail.com'
-];
+const ALLOWED_DOMAINS = ['gmail.com','yahoo.com','outlook.com','hotmail.com','aol.com','icloud.com','protonmail.com','zoho.com','yandex.com','mail.com'];
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 // ========== AUTH ROUTES ==========
@@ -378,7 +366,7 @@ app.get('/api/doubts/:courseId/:lectureId', async (req, res) => {
     // Attach admin reply as a special reply if present
     if (d.adminReply && d.adminReply.trim() !== '') {
       d.replies.push({
-        _id: 'admin-'+d._id,
+        _id: 'admin-' + d._id,
         userEmail: 'admin',
         userName: 'Admin',
         message: d.adminReply,
@@ -497,7 +485,7 @@ app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adm
   res.json(chapter.lectures);
 });
 
-// Students list with progress count
+// Students list with progress
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   const students = await User.find({}, 'name email phone').lean();
   for (let s of students) {
@@ -506,7 +494,6 @@ app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   res.json(students);
 });
 
-// Assign course
 app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
   try {
     const { userEmail, courseId } = req.body;
@@ -556,14 +543,13 @@ app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
   res.json(doubt);
 });
 
-// ========== AI CHATBOT (OpenRouter) ==========
+// ========== AI CHATBOT WITH FALLBACK MODELS ==========
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ message: 'Messages array required.' });
   }
 
-  // Platform context
   const systemMsg = {
     role: "system",
     content: `You are a helpful AI assistant for Sankalp Digital Pathshala, an online IT institute. 
@@ -576,48 +562,64 @@ If you don't know something, say you're an AI and suggest contacting support at 
 
   const fullMessages = [systemMsg, ...messages];
 
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct:free",
-        messages: fullMessages,
-        stream: true
-      })
-    });
+  // Fallback list of free models
+  const models = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "meta-llama/llama-3.2-3b-instruct:free",
+    "google/gemini-flash-1.5-8b:free"
+  ];
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenRouter error:', error);
-      return res.status(response.status).json({ message: 'AI service error.' });
-    }
+  let lastError = null;
 
-    // SSE streaming
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    });
+  for (const model of models) {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          messages: fullMessages,
+          stream: true
+        })
+      });
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+      if (response.ok) {
+        // Stream successful response
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        });
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        res.end();
-        break;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) { res.end(); return; }
+          res.write(decoder.decode(value));
+        }
+      } else if (response.status === 429) {
+        lastError = 'Rate limited, trying next model...';
+        console.warn(`Model ${model} rate limited.`);
+        continue; // try next model
+      } else {
+        const errorText = await response.text();
+        lastError = errorText;
+        console.error(`Model ${model} error:`, errorText);
+        break; // non-429 error, stop trying
       }
-      res.write(decoder.decode(value));
+    } catch (err) {
+      lastError = err.message;
+      console.error(`Error with model ${model}:`, err);
+      break;
     }
-  } catch (err) {
-    console.error('Chat error:', err);
-    res.status(500).json({ message: 'Server error.' });
   }
+
+  // If all models failed
+  return res.status(503).json({ message: 'AI service temporarily unavailable. Please try again later.' });
 });
 
 // ========== FRONTEND FALLBACK ==========
