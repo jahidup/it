@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // Floating WhatsApp
+  // Floating WhatsApp button
   const waBtn = document.createElement('a');
   waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
   waBtn.target = '_blank';
@@ -536,7 +536,6 @@ async function viewCourseChapters(courseId) {
   } catch { showToast('Error loading chapters', 'error'); }
 }
 
-// ====================== DISCUSSION PANEL (YouTube‑style) ======================
 function openDiscussionPanel(courseId, chapterId, lectureId) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -652,7 +651,6 @@ function openDiscussionPanel(courseId, chapterId, lectureId) {
   loadDiscussion();
 }
 
-// ====================== PROGRESS & REPORT ======================
 async function loadProgress() {
   try {
     const enrollRes = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
@@ -805,7 +803,7 @@ async function loadMyDoubts() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
-// ====================== NEW: SANKALP SATHI (Dashboard Chat) ======================
+// ====================== SANKALP SATHI (Dashboard Chat) ======================
 async function loadSankalpSathi() {
   let html = `
     <div class="sathi-container">
@@ -814,7 +812,7 @@ async function loadSankalpSathi() {
         <p>Your AI assistant – ask me anything about the platform!</p>
       </div>
       <div class="sathi-messages" id="sathiMessages">
-        <div class="sathi-bot-message">👋 Hi! I'm Sankalp Sathi. How can I help you today?</div>
+        <div class="sathi-bot-message">👋 Hi! I'm Sankalp Sathi, created by <strong>NexGenAiTech</strong> to help you in your learning journey. How can I assist you today?</div>
       </div>
       <div class="sathi-input-area">
         <input type="text" id="sathiInput" placeholder="Type your message..." />
@@ -1048,6 +1046,7 @@ async function adminChapterLectureManager() {
   document.getElementById('adminContent').innerHTML = html;
   const select = document.getElementById('courseSelect');
   const panel = document.getElementById('chaptersPanel');
+
   async function loadChapters() {
     const courseId = select.value;
     try {
