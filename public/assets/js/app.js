@@ -55,7 +55,7 @@ function timeAgo(date) {
   return new Date(date).toLocaleDateString();
 }
 
-// ====================== NAVBAR ======================
+// ====================== NAVBAR SCROLL HIDE ======================
 let lastScroll = 0;
 window.addEventListener('scroll', () => {
   const navbar = document.getElementById('navbar');
@@ -114,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) {
     loadFeatured();
-    // Carousel: single slide auto‑play (CSS handles it, no JS needed)
   }
   if (path.includes('courses.html')) loadAllCourses();
   if (path.includes('course-detail.html')) loadDetail();
@@ -132,8 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(waBtn);
 });
 
-// ====================== CAROUSEL ======================
-// The CSS single‑slide animation is used; no JS required.
+// ====================== CAROUSEL (CSS handles animation) ======================
+function initCarousel() { /* no JS needed */ }
 
 // ====================== COURSE CARD (no enrollment count) ======================
 function cardHTML(course) {
@@ -218,7 +217,7 @@ function setupLogin() {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
@@ -234,8 +233,8 @@ function setupLogin() {
 
   const forgotLink = document.createElement('a');
   forgotLink.href = '#'; forgotLink.textContent = 'Forgot Password?';
-  forgotLink.style.display='block'; forgotLink.style.margin='15px 0'; forgotLink.style.textAlign='center';
-  forgotLink.style.color='#0284c7'; forgotLink.style.cursor='pointer';
+  forgotLink.style.display = 'block'; forgotLink.style.margin = '15px 0'; forgotLink.style.textAlign = 'center';
+  forgotLink.style.color = '#0284c7'; forgotLink.style.cursor = 'pointer';
   form.appendChild(forgotLink);
   forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgotPasswordModal(); });
 }
@@ -259,7 +258,6 @@ function showForgotPasswordModal() {
       <button class="btn btn-outline btn-full" id="closeForgotModal" style="margin-top:10px;">Cancel</button>
     </div>`;
   document.body.appendChild(modal);
-
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
   document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
@@ -267,19 +265,18 @@ function showForgotPasswordModal() {
     setLoading(document.getElementById('sendForgotOtp'), true);
     try {
       const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
       const data = await res.json();
       if (res.ok) {
         showToast(data.message, 'success');
-        document.getElementById('forgotOtpSection').style.display='block';
+        document.getElementById('forgotOtpSection').style.display = 'block';
       } else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('sendForgotOtp'), false); }
   });
-
   document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -287,19 +284,18 @@ function showForgotPasswordModal() {
     setLoading(document.getElementById('verifyForgotOtp'), true);
     try {
       const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp })
       });
       const data = await res.json();
       if (res.ok) {
         showToast('OTP verified!', 'success');
-        document.getElementById('newPasswordSection').style.display='block';
+        document.getElementById('newPasswordSection').style.display = 'block';
       } else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('verifyForgotOtp'), false); }
   });
-
   document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -308,8 +304,8 @@ function showForgotPasswordModal() {
     setLoading(document.getElementById('resetPasswordBtn'), true);
     try {
       const res = await fetch(`${API_BASE}/auth/reset-password`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp, newPassword })
       });
       const data = await res.json();
@@ -336,14 +332,14 @@ function setupRegister() {
     setLoading(sendBtn, true);
     try {
       const res = await fetch(`${API_BASE}/auth/send-otp`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
       const data = await res.json();
       if (res.ok) {
         showToast(data.message, 'success');
-        document.getElementById('otpSection').style.display='block';
+        document.getElementById('otpSection').style.display = 'block';
       } else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(sendBtn, false); }
@@ -356,8 +352,8 @@ function setupRegister() {
     setLoading(verifyBtn, true);
     try {
       const res = await fetch(`${API_BASE}/auth/verify-otp`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp })
       });
       const data = await res.json();
@@ -378,8 +374,8 @@ function setupRegister() {
     const otp = document.getElementById('otp').value.trim();
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, phone, password, otp })
       });
       const data = await res.json();
@@ -520,7 +516,7 @@ async function viewCourseChapters(courseId) {
       btn.addEventListener('click', async () => {
         const lectureId = btn.dataset.lectureId;
         setLoading(btn, true);
-        await fetch(`${API_BASE}/progress/mark-complete/${courseId}/${lectureId}`, { method:'POST', headers: authHeaders() });
+        await fetch(`${API_BASE}/progress/mark-complete/${courseId}/${lectureId}`, { method: 'POST', headers: authHeaders() });
         showToast('Marked as complete', 'success');
         viewCourseChapters(courseId);
         setLoading(btn, false);
@@ -606,8 +602,8 @@ function openDiscussionPanel(courseId, lectureId) {
           if (!message) return;
           setLoading(btn, true);
           await fetch(`${API_BASE}/doubts`, {
-            method:'POST',
-            headers:{...authHeaders(), 'Content-Type':'application/json'},
+            method: 'POST',
+            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ courseId, lectureId, message, parentId })
           });
           showToast('Reply posted', 'success');
@@ -624,8 +620,8 @@ function openDiscussionPanel(courseId, lectureId) {
     const btn = overlay.querySelector('#postCommentBtn');
     setLoading(btn, true);
     await fetch(`${API_BASE}/doubts`, {
-      method:'POST',
-      headers:{...authHeaders(), 'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ courseId, lectureId, message: msg, parentId: null })
     });
     showToast('Comment added', 'success');
@@ -729,8 +725,8 @@ async function loadAskDoubtForm() {
     if (!message) return showToast('Write your doubt', 'error');
     setLoading(document.getElementById('submitDoubtFormBtn'), true);
     await fetch(`${API_BASE}/doubts`, {
-      method:'POST',
-      headers:{...authHeaders(), 'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ courseId, lectureId, message, parentId: null })
     });
     showToast('Doubt submitted', 'success');
@@ -775,8 +771,8 @@ function setupAdmin() {
     const password = document.getElementById('adminPassword').value;
     try {
       const res = await fetch(`${API_BASE}/auth/admin-login`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
@@ -861,8 +857,8 @@ async function adminManageCourses() {
     const imageUrl = document.getElementById('imageUrl').value;
     try {
       const res = await fetch(`${API_BASE}/admin/courses`, {
-        method:'POST',
-        headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, description, price, originalPrice, imageUrl, chapters: [] })
       });
       if (!res.ok) throw new Error('Failed');
@@ -891,7 +887,7 @@ async function loadCourseList() {
     document.querySelectorAll('.delete-course-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (!confirm('Delete?')) return;
-        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method:'DELETE', headers: adminAuthHeaders() });
+        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method: 'DELETE', headers: adminAuthHeaders() });
         showToast('Deleted', 'info');
         loadCourseList();
       });
@@ -901,7 +897,6 @@ async function loadCourseList() {
 
 // ---------- ADMIN CHAPTER & LECTURE MANAGER ----------
 async function adminChapterLectureManager() {
-  // Select course
   const res = await fetch(`${API_BASE}/courses`);
   const courses = await res.json();
   let html = `
@@ -973,8 +968,8 @@ async function adminChapterLectureManager() {
           const input = document.querySelector(`.chapter-title-input[data-chapter-id="${chapterId}"]`);
           const title = input.value;
           await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}`, {
-            method:'PUT',
-            headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+            method: 'PUT',
+            headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ title })
           });
           showToast('Chapter updated', 'success');
@@ -985,7 +980,7 @@ async function adminChapterLectureManager() {
         btn.addEventListener('click', async () => {
           if (!confirm('Delete chapter and all its lectures?')) return;
           const chapterId = btn.dataset.chapterId;
-          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}`, { method:'DELETE', headers: adminAuthHeaders() });
+          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}`, { method: 'DELETE', headers: adminAuthHeaders() });
           showToast('Chapter deleted', 'info');
           loadChapters();
         });
@@ -1001,12 +996,11 @@ async function adminChapterLectureManager() {
           const notesUrl = row.querySelector('.lecture-notes-input').value;
           const dppLink = row.querySelector('.lecture-dpp-input').value;
           const thumbnail = row.querySelector('.lecture-thumb-input').value;
-          // find the parent chapter id
           const chapterItem = row.closest('.chapter-admin-item');
           const chapterId = chapterItem.querySelector('.save-chapter-btn').dataset.chapterId;
           await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}/lectures/${lectureId}`, {
-            method:'PUT',
-            headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+            method: 'PUT',
+            headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, videoUrl, notesUrl, dppLink, thumbnail })
           });
           showToast('Lecture updated', 'success');
@@ -1017,7 +1011,7 @@ async function adminChapterLectureManager() {
           const lectureId = btn.dataset.lectureId;
           const chapterItem = btn.closest('.chapter-admin-item');
           const chapterId = chapterItem.querySelector('.save-chapter-btn').dataset.chapterId;
-          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}/lectures/${lectureId}`, { method:'DELETE', headers: adminAuthHeaders() });
+          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}/lectures/${lectureId}`, { method: 'DELETE', headers: adminAuthHeaders() });
           showToast('Lecture removed', 'info');
           loadChapters();
         });
@@ -1033,8 +1027,8 @@ async function adminChapterLectureManager() {
           const thumbnail = form.querySelector('.new-lecture-thumb').value;
           if (!title || !videoUrl || !notesUrl) return showToast('Fill required fields', 'error');
           await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}/lectures`, {
-            method:'POST',
-            headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+            method: 'POST',
+            headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, videoUrl, notesUrl, dppLink, thumbnail })
           });
           showToast('Lecture added', 'success');
@@ -1045,8 +1039,8 @@ async function adminChapterLectureManager() {
         const title = document.getElementById('newChapterTitle').value.trim();
         if (!title) return showToast('Chapter title required', 'error');
         await fetch(`${API_BASE}/admin/courses/${courseId}/chapters`, {
-          method:'POST',
-          headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+          method: 'POST',
+          headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ title, lectures: [] })
         });
         showToast('Chapter added', 'success');
@@ -1099,8 +1093,8 @@ async function adminAssignCourse() {
     const courseId = document.getElementById('assignCourse').value;
     try {
       const res = await fetch(`${API_BASE}/admin/assign`, {
-        method:'POST',
-        headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ userEmail, courseId })
       });
       const data = await res.json();
@@ -1116,30 +1110,41 @@ async function adminDoubts() {
     if (!res.ok) throw new Error('Failed');
     const doubts = await res.json();
     let html = '<h3>Student Doubts</h3>';
-    doubts.forEach(d => {
-      html += `
-        <div class="doubt-card">
-          <p><strong>${d.userName} (${d.userEmail})</strong> – ${new Date(d.createdAt).toLocaleString()}</p>
-          <p>${d.message}</p>
-          ${d.adminReply ? `<p class="reply">↳ Admin: ${d.adminReply}</p>` : ''}
-          <input type="text" class="reply-input" data-id="${d._id}" placeholder="Reply..." style="width:100%; margin-top:8px; padding:6px;">
-          <button class="btn btn-xs btn-primary send-reply-btn" data-id="${d._id}" style="margin-top:5px;">Send Reply</button>
-        </div>`;
-    });
+    if (!doubts.length) {
+      html += '<p>No doubts submitted yet.</p>';
+    } else {
+      doubts.forEach(d => {
+        html += `
+          <div class="doubt-card">
+            <div class="doubt-meta">
+              <strong>${d.userName}</strong> (${d.userEmail})<br>
+              <small>📘 ${d.courseTitle} – 📹 ${d.lectureTitle}</small><br>
+              <small>${new Date(d.createdAt).toLocaleString()}</small>
+            </div>
+            <p style="margin:10px 0;">${d.message}</p>
+            ${d.adminReply ? `<p class="reply">↳ Admin: ${d.adminReply}</p>` : ''}
+            <input type="text" class="reply-input" data-id="${d._id}" placeholder="Reply..." style="width:100%; margin-top:8px; padding:6px;">
+            <button class="btn btn-xs btn-primary send-reply-btn" data-id="${d._id}" style="margin-top:5px;">Send Reply</button>
+          </div>`;
+      });
+    }
     document.getElementById('adminContent').innerHTML = html;
+
     document.querySelectorAll('.send-reply-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
         const reply = document.querySelector(`.reply-input[data-id="${id}"]`).value;
         if (!reply) return;
         await fetch(`${API_BASE}/admin/doubts/${id}`, {
-          method:'PUT',
-          headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+          method: 'PUT',
+          headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ adminReply: reply })
         });
         adminDoubts();
         showToast('Reply sent', 'success');
       });
     });
-  } catch { document.getElementById('adminContent').innerHTML = '<p>Error loading doubts.</p>'; }
+  } catch {
+    document.getElementById('adminContent').innerHTML = '<p>Error loading doubts.</p>';
+  }
 }
