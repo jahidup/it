@@ -120,7 +120,7 @@ const ALLOWED_DOMAINS = [
 ];
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// ---------- AUTH ROUTES ----------
+// ========== AUTH ROUTES ==========
 app.post('/api/auth/send-otp',
   rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests.' }),
   async (req, res) => {
@@ -275,18 +275,16 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ---------- COURSE ROUTES ----------
+// ========== COURSE ROUTES (order matters) ==========
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
   res.json(courses);
 });
 
-// Specific routes before parameterized
 app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   const { courseId } = req.body;
   const userEmail = req.user.email;
-  if (await Enrollment.findOne({ userEmail, courseId }))
-    return res.status(400).json({ message: 'Already enrolled.' });
+  if (await Enrollment.findOne({ userEmail, courseId })) return res.status(400).json({ message: 'Already enrolled.' });
   await new Enrollment({ userEmail, courseId }).save();
   res.status(201).json({ message: 'Enrolled.' });
 });
@@ -303,7 +301,7 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// ---------- PROGRESS ----------
+// ========== PROGRESS ROUTES ==========
 app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, async (req, res) => {
   try {
     const { courseId, lectureId } = req.params;
@@ -345,7 +343,7 @@ app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ---------- DOUBTS (threaded) ----------
+// ========== DOUBTS ROUTES (threaded, with chapterId) ==========
 app.post('/api/doubts', authMiddleware, async (req, res) => {
   try {
     const { courseId, chapterId, lectureId, message, parentId } = req.body;
@@ -354,7 +352,7 @@ app.post('/api/doubts', authMiddleware, async (req, res) => {
       userEmail: req.user.email,
       userName: user ? user.name : req.user.email,
       courseId,
-      chapterId,
+      chapterId: chapterId || null,
       lectureId,
       message,
       parentId: parentId || null
@@ -380,7 +378,7 @@ app.get('/api/doubts/my', authMiddleware, async (req, res) => {
   res.json(doubts);
 });
 
-// ---------- ADMIN ROUTES ----------
+// ========== ADMIN ROUTES ==========
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   const totalCourses = await Course.countDocuments();
   const totalStudents = await User.countDocuments({ isVerified: true });
@@ -422,7 +420,7 @@ app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   res.json({ message: 'Course deleted.' });
 });
 
-// Chapters inside a course
+// Chapters
 app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => {
   const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
@@ -503,7 +501,7 @@ app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// --- UPDATED: Admin doubts with course, chapter, lecture info ---
+// Admin doubts – enriched with course, chapter, lecture titles
 app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
   try {
     const topDoubts = await Doubt.find({ parentId: null })
@@ -531,9 +529,7 @@ app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
       };
     }));
     res.json(enriched);
-  } catch (err) {
-    res.status(500).json({ message: 'Server error.' });
-  }
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
 app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
