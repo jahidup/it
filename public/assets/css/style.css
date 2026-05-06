@@ -1,5 +1,7 @@
 /* ============================================================
-   SANKALP DIGITAL PATHSHALA – PREMIUM STYLESHEET (FIXED)
+   SANKALP DIGITAL PATHSHALA – PREMIUM STYLESHEET
+   Netflix‑inspired · Sky‑blue accent · Light, trusted feel
+   Horizontal auto‑scroll hero carousel included
    ============================================================ */
 
 /* ---------- RESET & BASE ---------- */
@@ -222,19 +224,31 @@ img {
   color: #0284c7;
 }
 
-/* ---------- HERO / CAROUSEL ---------- */
+/* ============================================================
+   HORIZONTAL AUTO‑SCROLL CAROUSEL (3 images, seamless loop)
+   ============================================================ */
 .hero-carousel {
-  position: relative;
   overflow: hidden;
+  position: relative;
+  height: 500px;
+}
+
+.carousel-track {
+  display: flex;
+  width: 600%;           /* 6 slides (original 3 × 2) */
+  animation: slideHorizontal 25s linear infinite;
 }
 
 .carousel-slide {
-  padding: 130px 0 100px;
+  min-width: 16.666%;     /* 100% / 6 */
   background-size: cover;
   background-position: center;
   color: white;
   text-align: center;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .carousel-slide::before {
@@ -249,53 +263,31 @@ img {
   z-index: 1;
   max-width: 800px;
   margin: 0 auto;
+  padding: 0 20px;
 }
 
 .hero-title {
   font-size: 3.2rem;
   font-weight: 800;
   margin-bottom: 24px;
-  animation: fadeInUp 0.6s ease;
 }
 
 .hero-subtitle {
   font-size: 1.25rem;
   opacity: 0.95;
   margin-bottom: 32px;
-  animation: fadeInUp 0.8s ease;
 }
 
 .carousel-controls {
-  position: absolute;
-  top: 50%;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 20px;
-  transform: translateY(-50%);
+  display: none;          /* no manual buttons for auto‑scroll */
 }
 
-.carousel-controls button {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  font-size: 2rem;
-  padding: 10px;
-  cursor: pointer;
-  border-radius: 50%;
-  transition: background 0.2s;
+@keyframes slideHorizontal {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
-.carousel-controls button:hover {
-  background: rgba(255, 255, 255, 0.4);
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(25px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ---------- COURSE CARDS (Fixed overflow) ---------- */
+/* ---------- PUBLIC COURSE CARDS ---------- */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -312,7 +304,7 @@ img {
   display: flex;
   flex-direction: column;
   border: 1px solid #f1f5f9;
-  overflow: hidden;                 /* ← CRITICAL FIX */
+  overflow: hidden;
 }
 
 .course-card:hover {
@@ -381,15 +373,6 @@ img {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.course-card .btn {
-  align-self: flex-start;
-  margin-top: auto;
-}
-
-.course-card .btn-full {
-  width: 100%;
 }
 
 /* ---------- COURSE DETAIL ---------- */
@@ -673,7 +656,7 @@ img {
   overflow-y: auto;
 }
 
-/* ---------- COMPACT COURSE LIST (Student) ---------- */
+/* ---------- COMPACT COURSE LIST ---------- */
 .compact-course-list {
   display: flex;
   flex-direction: column;
@@ -1093,6 +1076,10 @@ tr:hover {
 
   .nav-toggle {
     display: block;
+  }
+
+  .hero-carousel {
+    height: 400px;
   }
 
   .hero-title {
