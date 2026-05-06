@@ -9,15 +9,18 @@ const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+
+// ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ---------- DATABASE ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ---------- SCHEMAS ----------
+// ========== SCHEMAS ==========
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -35,13 +38,19 @@ const lectureSchema = new mongoose.Schema({
   thumbnail: String,
   createdAt: { type: Date, default: Date.now }
 });
+
+const chapterSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  lectures: [lectureSchema]
+});
+
 const courseSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
   originalPrice: { type: Number, default: null },
   imageUrl: { type: String, default: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600' },
-  lectures: [lectureSchema]
+  chapters: [chapterSchema]
 }, { timestamps: true });
 const Course = mongoose.model('Course', courseSchema);
 
@@ -71,24 +80,26 @@ const lectureProgressSchema = new mongoose.Schema({
 const LectureProgress = mongoose.model('LectureProgress', lectureProgressSchema);
 
 const doubtSchema = new mongoose.Schema({
-  userEmail: String,
-  userName: String,
-  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
-  lectureId: String,
-  message: String,
-  adminReply: { type: String, default: '' },
+  userEmail: { type: String, required: true },
+  userName: { type: String, required: true },
+  courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
+  lectureId: { type: String, required: true },
+  parentId: { type: mongoose.Schema.Types.ObjectId, default: null },
+  message: { type: String, required: true },
   createdAt: { type: Date, default: Date.now }
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ---------- MIDDLEWARE ----------
+// ========== MIDDLEWARE ==========
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided.' });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch (err) { res.status(401).json({ message: 'Invalid token.' }); }
+  } catch (err) {
+    res.status(401).json({ message: 'Invalid token.' });
+  }
 };
 
 const adminMiddleware = (req, res, next) => {
@@ -98,10 +109,13 @@ const adminMiddleware = (req, res, next) => {
   });
 };
 
-// ---------- EMAIL SETUP ----------
+// ========== EMAIL SETUP ==========
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
 });
 
 const ALLOWED_DOMAINS = [
@@ -110,7 +124,7 @@ const ALLOWED_DOMAINS = [
 ];
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// ---------- AUTH ROUTES ----------
+// ========== AUTH ROUTES ==========
 app.post('/api/auth/send-otp',
   rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests.' }),
   async (req, res) => {
@@ -265,13 +279,13 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ---------- COURSES ROUTES ----------
+// ========== COURSE ROUTES ==========
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
-  for (let c of courses) c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
   res.json(courses);
 });
 
+// Specific routes MUST come before /:id
 app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   const { courseId } = req.body;
   const userEmail = req.user.email;
@@ -284,18 +298,16 @@ app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
 app.get('/api/courses/my-enrollments', authMiddleware, async (req, res) => {
   const enrollments = await Enrollment.find({ userEmail: req.user.email }).populate('courseId').lean();
   const courses = enrollments.map(e => e.courseId).filter(Boolean);
-  for (let c of courses) c.enrollmentCount = await Enrollment.countDocuments({ courseId: c._id });
   res.json(courses);
 });
 
 app.get('/api/courses/:id', async (req, res) => {
   const course = await Course.findById(req.params.id).lean();
   if (!course) return res.status(404).json({ message: 'Not found.' });
-  course.enrollmentCount = await Enrollment.countDocuments({ courseId: course._id });
   res.json(course);
 });
 
-// ---------- PROGRESS ----------
+// ========== PROGRESS ROUTES ==========
 app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, async (req, res) => {
   try {
     const { courseId, lectureId } = req.params;
@@ -315,15 +327,21 @@ app.get('/api/progress/:courseId', authMiddleware, async (req, res) => {
 app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   try {
     const completions = await LectureProgress.find({ userEmail: req.user.email })
-      .populate({ path: 'courseId', select: 'title lectures' })
+      .populate({ path: 'courseId', select: 'title chapters' })
       .sort({ completedAt: -1 })
       .lean();
     const enriched = await Promise.all(completions.map(async (c) => {
       const course = c.courseId;
-      const lecture = course.lectures.find(l => l._id.toString() === c.lectureId);
+      let lecture = null;
+      if (course?.chapters) {
+        for (let ch of course.chapters) {
+          lecture = ch.lectures.find(l => l._id.toString() === c.lectureId);
+          if (lecture) break;
+        }
+      }
       return {
-        courseTitle: course.title,
-        lectureTitle: lecture ? lecture.title : 'Unknown Lecture',
+        courseTitle: course?.title || 'Deleted Course',
+        lectureTitle: lecture?.title || 'Unknown Lecture',
         completedAt: c.completedAt
       };
     }));
@@ -331,21 +349,33 @@ app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ---------- DOUBTS ----------
+// ========== DOUBTS ROUTES ==========
 app.post('/api/doubts', authMiddleware, async (req, res) => {
   try {
-    const { courseId, lectureId, message } = req.body;
+    const { courseId, lectureId, message, parentId } = req.body;
     const user = await User.findOne({ email: req.user.email });
     const doubt = new Doubt({
       userEmail: req.user.email,
       userName: user ? user.name : req.user.email,
       courseId,
       lectureId,
-      message
+      message,
+      parentId: parentId || null
     });
     await doubt.save();
-    res.status(201).json({ message: 'Doubt submitted.' });
+    res.status(201).json(doubt);
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
+});
+
+app.get('/api/doubts/:courseId/:lectureId', async (req, res) => {
+  const { courseId, lectureId } = req.params;
+  const topLevel = await Doubt.find({ courseId, lectureId, parentId: null })
+    .sort({ createdAt: -1 })
+    .lean();
+  for (let d of topLevel) {
+    d.replies = await Doubt.find({ parentId: d._id }).sort({ createdAt: 1 }).lean();
+  }
+  res.json(topLevel);
 });
 
 app.get('/api/doubts/my', authMiddleware, async (req, res) => {
@@ -353,7 +383,7 @@ app.get('/api/doubts/my', authMiddleware, async (req, res) => {
   res.json(doubts);
 });
 
-// ---------- ADMIN ROUTES ----------
+// ========== ADMIN ROUTES ==========
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   const totalCourses = await Course.countDocuments();
   const totalStudents = await User.countDocuments({ isVerified: true });
@@ -361,14 +391,15 @@ app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   res.json({ totalCourses, totalStudents, totalEnrollments });
 });
 
+// Courses CRUD
 app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   try {
-    const { title, description, price, originalPrice, imageUrl, lectures } = req.body;
+    const { title, description, price, originalPrice, imageUrl, chapters } = req.body;
     const course = new Course({
       title, description, price,
       originalPrice: originalPrice || null,
       imageUrl: imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=600',
-      lectures: lectures || []
+      chapters: chapters || []
     });
     await course.save();
     res.status(201).json(course);
@@ -377,10 +408,10 @@ app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
 
 app.put('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   try {
-    const { title, description, price, originalPrice, imageUrl, lectures } = req.body;
+    const { title, description, price, originalPrice, imageUrl, chapters } = req.body;
     const updated = await Course.findByIdAndUpdate(
       req.params.id,
-      { title, description, price, originalPrice, imageUrl, lectures },
+      { title, description, price, originalPrice, imageUrl, chapters },
       { new: true, runValidators: true }
     );
     if (!updated) return res.status(404).json({ message: 'Course not found.' });
@@ -394,52 +425,64 @@ app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   res.json({ message: 'Course deleted.' });
 });
 
-// Lecture management
-app.get('/api/admin/lectures/:courseId', adminMiddleware, async (req, res) => {
-  const course = await Course.findById(req.params.courseId);
+// Chapters inside a course
+app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
-  res.json(course.lectures);
-});
-
-app.post('/api/admin/lectures/:courseId', adminMiddleware, async (req, res) => {
-  const course = await Course.findById(req.params.courseId);
-  if (!course) return res.status(404).json({ message: 'Course not found.' });
-  course.lectures.push(req.body);
+  course.chapters.push(req.body);   // { title, lectures: [] }
   await course.save();
-  res.json(course.lectures);
+  res.json(course.chapters);
 });
 
-app.put('/api/admin/lectures/:courseId/:lectureId', adminMiddleware, async (req, res) => {
-  const course = await Course.findById(req.params.courseId);
+app.put('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
-  const lecture = course.lectures.id(req.params.lectureId);
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  Object.assign(chapter, req.body);
+  await course.save();
+  res.json(course.chapters);
+});
+
+app.delete('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.chapters = course.chapters.filter(c => c._id.toString() !== req.params.chapterId);
+  await course.save();
+  res.json(course.chapters);
+});
+
+// Lectures inside a chapter
+app.post('/api/admin/courses/:id/chapters/:chapterId/lectures', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  chapter.lectures.push(req.body);
+  await course.save();
+  res.json(chapter.lectures);
+});
+
+app.put('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  const lecture = chapter.lectures.id(req.params.lectureId);
   if (!lecture) return res.status(404).json({ message: 'Lecture not found.' });
   Object.assign(lecture, req.body);
   await course.save();
-  res.json(course.lectures);
+  res.json(chapter.lectures);
 });
 
-app.delete('/api/admin/lectures/:courseId/:lectureId', adminMiddleware, async (req, res) => {
-  const course = await Course.findById(req.params.courseId);
+app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
-  course.lectures = course.lectures.filter(l => l._id.toString() !== req.params.lectureId);
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  chapter.lectures = chapter.lectures.filter(l => l._id.toString() !== req.params.lectureId);
   await course.save();
-  res.json(course.lectures);
-});
-
-// Admin doubts (with student names)
-app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
-  const doubts = await Doubt.find().sort({ createdAt: -1 }).lean();
-  res.json(doubts);
-});
-
-app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
-  try {
-    const { adminReply } = req.body;
-    const doubt = await Doubt.findByIdAndUpdate(req.params.id, { adminReply }, { new: true });
-    if (!doubt) return res.status(404).json({ message: 'Doubt not found.' });
-    res.json(doubt);
-  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
+  res.json(chapter.lectures);
 });
 
 // Students list with progress count
@@ -451,6 +494,7 @@ app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   res.json(students);
 });
 
+// Assign course
 app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
   try {
     const { userEmail, courseId } = req.body;
@@ -460,6 +504,19 @@ app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
     await new Enrollment({ userEmail, courseId }).save();
     res.status(201).json({ message: 'Assigned.' });
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
+});
+
+// Admin doubts (list all top-level)
+app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
+  const doubts = await Doubt.find({ parentId: null }).sort({ createdAt: -1 }).lean();
+  res.json(doubts);
+});
+
+app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
+  const { adminReply } = req.body;
+  const doubt = await Doubt.findByIdAndUpdate(req.params.id, { adminReply }, { new: true });
+  if (!doubt) return res.status(404).json({ message: 'Doubt not found.' });
+  res.json(doubt);
 });
 
 // ---------- FRONTEND FALLBACK ----------
