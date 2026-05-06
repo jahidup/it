@@ -1,6 +1,7 @@
 /* ============================================================
    SANKALP DIGITAL PATHSHALA – PRO PREMIUM STYLESHEET
    Single‑slide horizontal carousel · Sky‑blue accent · Light & trusted
+   – Fixed overlap issues, perfect spacing
    ============================================================ */
 
 /* ---------- RESET & BASE ---------- */
@@ -252,9 +253,10 @@ img {
 .nav-toggle:hover { transform: rotate(90deg); }
 
 /* ============================================================
-   HERO CAROUSEL – single slide, horizontal auto‑slide (paused)
+   HERO CAROUSEL – single slide, horizontal auto‑slide (FIXED OVERLAP)
    ============================================================ */
 .hero-carousel {
+  margin-top: 70px;              /* push below fixed navbar */
   overflow: hidden;
   position: relative;
   height: 500px;
@@ -262,8 +264,8 @@ img {
 
 .carousel-track {
   display: flex;
-  width: 300%;                 /* 3 original slides */
-  animation: slidePause 15s ease infinite;
+  width: 300%;                  /* 3 original slides */
+  animation: slidePause 18s ease infinite;
 }
 
 .carousel-slide {
@@ -307,14 +309,7 @@ img {
 
 .carousel-controls { display: none; }
 
-/* Keyframes: each slide stays for 4.5s, then slides to the next in 0.5s.
-   For 3 slides: total 15s cycle.
-   0%–30%  → slide 1 visible (0%)
-   30%–33.33% → slide to slide 2 (-33.333%)
-   33.33%–63.33% → slide 2 visible
-   63.33%–66.66% → slide to slide 3 (-66.666%)
-   66.66%–96.66% → slide 3 visible
-   96.66%–100% → slide back to slide 1 (0%) */
+/* Keyframes for 3‑slide auto‑play (single slide visible at a time) */
 @keyframes slidePause {
   0%      { transform: translateX(0); }
   28%     { transform: translateX(0); }
@@ -426,9 +421,7 @@ img {
   font-weight: 600;
 }
 
-.enrollment-count {
-  display: none;   /* hidden as requested */
-}
+.enrollment-count { display: none; }
 
 /* ---------- COURSE DETAIL ---------- */
 .course-detail {
@@ -494,17 +487,17 @@ img {
 
 .feature-card h3 { margin-bottom: 10px; color: #0f172a; font-weight: 700; }
 
-/* ---------- AUTH PAGES ---------- */
+/* ---------- AUTH PAGES (login / register) – fixed overlap ---------- */
 .auth-section {
-  min-height: calc(100vh - 160px);
+  padding-top: 90px;             /* push below navbar */
+  min-height: calc(100vh - 90px);
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  padding: 40px 20px;
 }
 
-.auth-container { width: 100%; max-width: 500px; }
+.auth-container { width: 100%; max-width: 500px; padding: 20px; }
 
 .auth-card {
   background: white;
@@ -547,8 +540,12 @@ img {
 #sendOtpBtn,
 #verifyOtpBtn { padding: 10px 20px; font-size: 0.95rem; margin-top: 5px; }
 
-/* ---------- DASHBOARD LAYOUT ---------- */
-.dashboard-layout { display: flex; min-height: 100vh; }
+/* ---------- DASHBOARD LAYOUT – fixed overlap ---------- */
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+  margin-top: 70px;              /* push below navbar */
+}
 
 .sidebar {
   width: 280px;
@@ -562,6 +559,7 @@ img {
   position: relative;
   z-index: 50;
   overflow-y: auto;
+  height: calc(100vh - 70px);   /* full height minus navbar */
 }
 
 .sidebar .close-sidebar {
@@ -687,7 +685,7 @@ img {
 .lecture-actions-row { display: flex; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; flex-wrap: wrap; }
 .complete-badge { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 10px; margin-left: 6px; font-size: 0.85rem; }
 
-/* ---------- PROGRESS BAR (animated) ---------- */
+/* ---------- PROGRESS BAR ---------- */
 .progress-bar {
   height: 16px;
   background: #e2e8f0;
@@ -884,29 +882,10 @@ tr:hover { background: #f0f9ff; }
 .milestone-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(14,165,233,0.1); }
 .milestone-card h3 { font-size: 2.2rem; color: #0284c7; }
 
-/* ---------- LECTURE MANAGER (Admin) ---------- */
-.lecture-item {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 14px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  transition: box-shadow 0.2s;
-}
-.lecture-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
-.lecture-item input {
-  padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 0.9rem;
-  flex: 1 1 120px;
-}
-
-/* ---------- DISCUSSION PANEL (YouTube‑style) ---------- */
+/* ---------- CHAPTER & DISCUSSION PANEL ---------- */
+.chapters-container { margin-bottom: 20px; }
+.chapter-block { margin-bottom: 30px; }
+.chapter-title { font-size: 1.2rem; color: #0284c7; margin-bottom: 10px; font-weight: 700; }
 .discussion-panel {
   background: white;
   border-radius: 20px;
@@ -918,34 +897,16 @@ tr:hover { background: #f0f9ff; }
   box-shadow: 0 25px 60px rgba(0,0,0,0.15);
   animation: fadeInUp 0.3s ease;
 }
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
+.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .panel-header h3 { margin: 0; }
-.close-panel-btn {
-  background: none;
-  border: none;
-  font-size: 1.8rem;
-  cursor: pointer;
-  color: #64748b;
-}
+.close-panel-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #64748b; }
 .comments-list { margin-bottom: 20px; }
 .comment-thread { margin-bottom: 15px; }
-.comment {
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 5px;
-}
+.comment { background: #f8fafc; border-radius: 12px; padding: 12px; margin-bottom: 5px; }
 .comment-author { font-weight: 600; color: #0f172a; }
 .comment-time { font-size: 0.8rem; color: #94a3b8; margin-left: 8px; }
 .comment-text { margin-top: 5px; }
 .reply { margin-left: 30px; background: #f0f9ff; }
-.chapter-block { margin-bottom: 25px; }
-.chapter-title { font-size: 1.2rem; color: #0284c7; margin-bottom: 10px; }
 
 /* ---------- LOADING ---------- */
 .loading-spinner {
@@ -976,7 +937,7 @@ tr:hover { background: #f0f9ff; }
   }
   .nav-links.active { display: flex; }
   .nav-toggle { display: block; }
-  .hero-carousel { height: 400px; }
+  .hero-carousel { height: 400px; margin-top: 60px; }
   .hero-title { font-size: 2rem; }
   .section { padding: 50px 0; }
   .courses-grid { grid-template-columns: 1fr; }
@@ -988,12 +949,15 @@ tr:hover { background: #f0f9ff; }
     transition: left 0.3s;
     width: 280px;
     z-index: 100;
+    margin-top: 0;
   }
   .sidebar.active { left: 0; }
   .sidebar .close-sidebar { display: block; }
   .sidebar-toggle-btn { display: block; }
+  .dashboard-layout { margin-top: 60px; }
   .dashboard-content { padding: 20px; }
   .auth-card { padding: 30px 25px; }
+  .auth-section { padding-top: 80px; }
 }
 
 @media (max-width: 480px) {
