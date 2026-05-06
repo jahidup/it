@@ -129,10 +129,13 @@ document.addEventListener('DOMContentLoaded', () => {
   waBtn.className = 'floating-whatsapp';
   waBtn.innerHTML = '💬';
   document.body.appendChild(waBtn);
+
+  // AI Chatbot
+  initChatbot();
 });
 
 // ====================== CAROUSEL ======================
-function initCarousel() { /* CSS animation */ }
+function initCarousel() { /* CSS handles it */ }
 
 // ====================== COURSE CARD ======================
 function cardHTML(course) {
@@ -197,14 +200,14 @@ async function loadDetail() {
       </div>`;
     document.getElementById('buyNowBtn').addEventListener('click', () => {
       const user = getCurrentUser();
-      if (!user) { showToast('Please login first', 'error'); location.href = 'login.html'; return; }
+      if (!user) { showToast('Please login first', 'error'); location.href='login.html'; return; }
       const msg = `Hello Admin,\nName: ${user.name}\nEmail: ${user.email}\nCourse: ${course.title}`;
       window.open(`https://wa.me/+918055698328?text=${encodeURIComponent(msg)}`, '_blank');
     });
   } catch { container.innerHTML = '<p>Course not found.</p>'; }
 }
 
-// ====================== AUTH ======================
+// ====================== AUTHENTICATION ======================
 function setupLogin() {
   const form = document.getElementById('loginForm');
   if (!form) return;
@@ -535,7 +538,7 @@ async function viewCourseChapters(courseId) {
   } catch { showToast('Error loading chapters', 'error'); }
 }
 
-// ====================== DISCUSSION PANEL (fixed reply display) ======================
+// ====================== DISCUSSION PANEL (YouTube‑style) ======================
 function openDiscussionPanel(courseId, chapterId, lectureId) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -582,12 +585,23 @@ function openDiscussionPanel(courseId, chapterId, lectureId) {
               </div>
             </div>
             <div class="replies" id="replies-${d._id}">
-              ${(d.replies || []).map(r => `
-                <div class="comment reply">
-                  <span class="comment-author">${r.userName}</span>
-                  <span class="comment-time">${timeAgo(r.createdAt)}</span>
-                  <p class="comment-text">${r.message}</p>
-                </div>`).join('')}
+              ${(d.replies || []).map(r => {
+                if (r.isAdminReply) {
+                  return `
+                    <div class="comment admin-reply">
+                      <span class="comment-author">👑 ${r.userName}</span>
+                      <span class="comment-time">${timeAgo(r.createdAt)}</span>
+                      <p class="comment-text">${r.message}</p>
+                    </div>`;
+                } else {
+                  return `
+                    <div class="comment reply">
+                      <span class="comment-author">${r.userName}</span>
+                      <span class="comment-time">${timeAgo(r.createdAt)}</span>
+                      <p class="comment-text">${r.message}</p>
+                    </div>`;
+                }
+              }).join('')}
             </div>
           </div>`;
       });
@@ -608,7 +622,6 @@ function openDiscussionPanel(courseId, chapterId, lectureId) {
           const message = textarea.value.trim();
           if (!message) return;
           setLoading(btn, true);
-          // chapterId is optional for replies, send as null
           await fetch(`${API_BASE}/doubts`, {
             method: 'POST',
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
@@ -627,7 +640,6 @@ function openDiscussionPanel(courseId, chapterId, lectureId) {
     if (!msg) return;
     const btn = overlay.querySelector('#postCommentBtn');
     setLoading(btn, true);
-    // top-level comment includes chapterId
     await fetch(`${API_BASE}/doubts`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
@@ -687,7 +699,6 @@ async function loadPerformanceReport() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
-// ====================== ASK DOUBT FORM (with chapter) ======================
 async function loadAskDoubtForm() {
   const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
   const courses = await res.json();
@@ -1149,17 +1160,22 @@ async function adminDoubts() {
       html += '<p>No doubts submitted yet.</p>';
     } else {
       doubts.forEach(d => {
+        const isReplied = d.adminReply && d.adminReply.trim() !== '';
         html += `
           <div class="doubt-card">
             <div class="doubt-meta">
               <strong>${d.userName}</strong> (${d.userEmail})<br>
               <small>📘 ${d.courseTitle} | 📂 ${d.chapterTitle} | 📹 ${d.lectureTitle}</small><br>
               <small>${new Date(d.createdAt).toLocaleString()}</small>
+              ${isReplied ? '<span class="badge replied-badge">✓ Replied</span>' : ''}
             </div>
             <p style="margin:10px 0;">${d.message}</p>
-            ${d.adminReply ? `<p class="reply">↳ Admin: ${d.adminReply}</p>` : ''}
-            <input type="text" class="reply-input" data-id="${d._id}" placeholder="Reply..." style="width:100%; margin-top:8px; padding:6px;">
-            <button class="btn btn-xs btn-primary send-reply-btn" data-id="${d._id}" style="margin-top:5px;">Send Reply</button>
+            ${isReplied ? `<p class="reply">↳ Admin: ${d.adminReply}</p>` : ''}
+            <div class="admin-reply-area" style="display:${isReplied ? 'none' : 'block'};">
+              <input type="text" class="reply-input" data-id="${d._id}" placeholder="Reply..." style="width:100%; margin-top:8px; padding:6px;">
+              <button class="btn btn-xs btn-primary send-reply-btn" data-id="${d._id}" style="margin-top:5px;">Send Reply</button>
+            </div>
+            ${isReplied ? `<button class="btn btn-xs btn-outline edit-reply-btn" data-id="${d._id}" data-reply="${d.adminReply.replace(/"/g, '&quot;')}" style="margin-top:5px;">✏️ Edit Reply</button>` : ''}
           </div>`;
       });
     }
@@ -1179,7 +1195,140 @@ async function adminDoubts() {
         showToast('Reply sent', 'success');
       });
     });
+
+    document.querySelectorAll('.edit-reply-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const id = this.dataset.id;
+        const currentReply = this.dataset.reply;
+        const card = this.closest('.doubt-card');
+        card.querySelector('.admin-reply-area').style.display = 'block';
+        card.querySelector('.reply-input').value = currentReply;
+        card.querySelector('.reply').style.display = 'none';
+        this.style.display = 'none';
+        const sendBtn = card.querySelector('.send-reply-btn');
+        sendBtn.textContent = 'Update';
+        sendBtn.onclick = async () => {
+          const newReply = card.querySelector('.reply-input').value;
+          if (!newReply) return;
+          await fetch(`${API_BASE}/admin/doubts/${id}`, {
+            method: 'PUT',
+            headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminReply: newReply })
+          });
+          adminDoubts();
+          showToast('Reply updated', 'success');
+        };
+      });
+    });
   } catch {
     document.getElementById('adminContent').innerHTML = '<p>Error loading doubts.</p>';
   }
+}
+
+// ====================== AI CHATBOT ======================
+function initChatbot() {
+  const chatIcon = document.createElement('div');
+  chatIcon.className = 'chatbot-icon';
+  chatIcon.innerHTML = '🤖';
+  document.body.appendChild(chatIcon);
+
+  const panel = document.createElement('div');
+  panel.className = 'chatbot-panel';
+  panel.innerHTML = `
+    <div class="chatbot-header">
+      <span>🤖 AI Assistant</span>
+      <button class="chatbot-close">&times;</button>
+    </div>
+    <div class="chatbot-messages" id="chatbotMessages">
+      <div class="bot-message">👋 Hi! I'm the Sankalp Digital Pathshala assistant. Ask me anything about our courses, features, or how to use the platform.</div>
+    </div>
+    <div class="chatbot-input-area">
+      <input type="text" id="chatbotInput" placeholder="Type your message..." />
+      <button id="chatbotSend">➤</button>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  chatIcon.addEventListener('click', () => {
+    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  });
+
+  panel.querySelector('.chatbot-close').addEventListener('click', () => {
+    panel.style.display = 'none';
+  });
+
+  let conversation = [];
+
+  async function sendMessage() {
+    const input = document.getElementById('chatbotInput');
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = '';
+
+    const messagesContainer = document.getElementById('chatbotMessages');
+    messagesContainer.innerHTML += `<div class="user-message">${message}</div>`;
+
+    conversation.push({ role: 'user', content: message });
+
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'bot-message typing';
+    typingDiv.textContent = '...';
+    messagesContainer.appendChild(typingDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    try {
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversation })
+      });
+
+      if (!res.ok) throw new Error('Chat error');
+
+      typingDiv.remove();
+
+      const botDiv = document.createElement('div');
+      botDiv.className = 'bot-message';
+      messagesContainer.appendChild(botDiv);
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let botReply = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (let line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6);
+            if (jsonStr === '[DONE]') continue;
+            try {
+              const data = JSON.parse(jsonStr);
+              const content = data.choices?.[0]?.delta?.content;
+              if (content) {
+                botReply += content;
+                botDiv.textContent = botReply;
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (botReply) {
+        conversation.push({ role: 'assistant', content: botReply });
+      }
+    } catch (err) {
+      typingDiv.textContent = 'Sorry, something went wrong. Please try again.';
+    }
+  }
+
+  document.getElementById('chatbotSend').addEventListener('click', sendMessage);
+  document.getElementById('chatbotInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
 }
