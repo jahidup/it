@@ -309,7 +309,7 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// ========== PROGRESS ROUTES (order matters) ==========
+// ========== PROGRESS ROUTES (order matters – specific BEFORE parameterized) ==========
 app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   try {
     const completions = await LectureProgress.find({ userEmail: req.user.email })
@@ -405,6 +405,7 @@ app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   res.json({ totalCourses, totalStudents, totalEnrollments });
 });
 
+// Courses CRUD
 app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   try {
     const { title, description, price, originalPrice, imageUrl, chapters } = req.body;
@@ -435,14 +436,64 @@ app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
 });
 
 // Chapters inside a course
-app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => { /* full implementation, omitted for brevity but present */ });
-app.put('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => {});
-app.delete('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => {});
+app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.chapters.push(req.body);
+  await course.save();
+  res.json(course.chapters);
+});
+
+app.put('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  Object.assign(chapter, req.body);
+  await course.save();
+  res.json(course.chapters);
+});
+
+app.delete('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  course.chapters = course.chapters.filter(c => c._id.toString() !== req.params.chapterId);
+  await course.save();
+  res.json(course.chapters);
+});
 
 // Lectures inside a chapter
-app.post('/api/admin/courses/:id/chapters/:chapterId/lectures', adminMiddleware, async (req, res) => {});
-app.put('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => {});
-app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => {});
+app.post('/api/admin/courses/:id/chapters/:chapterId/lectures', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  chapter.lectures.push(req.body);
+  await course.save();
+  res.json(chapter.lectures);
+});
+
+app.put('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  const lecture = chapter.lectures.id(req.params.lectureId);
+  if (!lecture) return res.status(404).json({ message: 'Lecture not found.' });
+  Object.assign(lecture, req.body);
+  await course.save();
+  res.json(chapter.lectures);
+});
+
+app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => {
+  const course = await Course.findById(req.params.id);
+  if (!course) return res.status(404).json({ message: 'Course not found.' });
+  const chapter = course.chapters.id(req.params.chapterId);
+  if (!chapter) return res.status(404).json({ message: 'Chapter not found.' });
+  chapter.lectures = chapter.lectures.filter(l => l._id.toString() !== req.params.lectureId);
+  await course.save();
+  res.json(chapter.lectures);
+});
 
 // Students list with progress
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
@@ -509,7 +560,6 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ message: 'Messages array required.' });
   }
 
-  // Rich system prompt with personality, course promotion, and creator credit
   const systemMsg = {
     role: "system",
     content: `You are Sankalp Sathi, the friendly AI assistant of Sankalp Digital Pathshala – a premium online IT institute.
@@ -538,11 +588,10 @@ Now, reply to the student in a helpful and cheerful manner.`
 
   const fullMessages = [systemMsg, ...messages];
 
-  // Fallback free models
+  // Use the stable, currently working free model
   const models = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemini-flash-1.5-8b:free"
+    "tencent/hy3-preview:free",
+    "meta-llama/llama-3.2-3b-instruct:free"
   ];
 
   for (const model of models) {
