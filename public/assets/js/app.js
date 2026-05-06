@@ -1,17 +1,3 @@
-The admin panel issues are now fully resolved:
-
-- **403 errors** were caused by the admin panel sending the **student’s JWT** instead of the admin token (when a student was previously logged in).  
-- **“undefined”** appeared because the admin dashboard did not check for HTTP errors and tried to destructure a 403 error response.
-
-Below is the **complete, fixed `app.js`** – every admin function now uses a dedicated `adminAuthHeaders()`, the student token is cleared on admin login, and all API calls properly handle HTTP errors.
-
-Replace your existing `public/assets/js/app.js` with this file. No server‑side changes are needed.
-
----
-
-### ✅ Fixed `public/assets/js/app.js`
-
-```javascript
 // ====================== CONFIG ======================
 const API_BASE = window.location.origin + '/api';
 
@@ -71,7 +57,7 @@ function timeAgo(date) {
   return new Date(date).toLocaleDateString();
 }
 
-// ====================== NAVBAR (unchanged but included) ======================
+// ====================== NAVBAR ======================
 let lastScroll = 0;
 window.addEventListener('scroll', () => {
   const navbar = document.getElementById('navbar');
@@ -123,11 +109,21 @@ window.handleAdminLogout = () => {
   window.location.href = 'admin.html';
 };
 
-// ====================== PAGE DETECTION ======================
+// ====================== PAGE INITIALISATION ======================
 document.addEventListener('DOMContentLoaded', () => {
   updateNav();
   const path = window.location.pathname;
-  if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) { loadFeatured(); initCarousel(); }
+
+  if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) {
+    loadFeatured();
+    initCarousel();
+    // Duplicate slides for seamless horizontal scroll
+    const track = document.querySelector('.hero-carousel');
+    if (track) {
+      const slides = track.querySelectorAll('.carousel-slide');
+      slides.forEach(s => track.appendChild(s.cloneNode(true)));
+    }
+  }
   if (path.includes('courses.html')) loadAllCourses();
   if (path.includes('course-detail.html')) loadDetail();
   if (path.includes('login.html')) setupLogin();
@@ -135,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // WhatsApp button
+  // Floating WhatsApp button
   const waBtn = document.createElement('a');
   waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
   waBtn.target = '_blank';
@@ -146,20 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ====================== CAROUSEL ======================
 function initCarousel() {
-  let current = 0;
-  const slides = document.querySelectorAll('.carousel-slide');
-  if (!slides.length) return;
-  slides.forEach((s, i) => s.style.display = i === 0 ? 'block' : 'none');
-  document.querySelector('.next-slide')?.addEventListener('click', () => {
-    slides[current].style.display = 'none';
-    current = (current + 1) % slides.length;
-    slides[current].style.display = 'block';
-  });
-  document.querySelector('.prev-slide')?.addEventListener('click', () => {
-    slides[current].style.display = 'none';
-    current = (current - 1 + slides.length) % slides.length;
-    slides[current].style.display = 'block';
-  });
+  // The carousel now works purely with CSS and duplicated slides.
+  // No manual button logic needed – keep for compatibility if needed.
 }
 
 // ====================== PUBLIC COURSE CARD ======================
@@ -179,7 +163,6 @@ function cardHTML(course) {
     </div>`;
 }
 
-// ====================== LOAD PUBLIC COURSES ======================
 async function loadFeatured() {
   const grid = document.getElementById('featuredCoursesGrid');
   if (!grid) return;
@@ -226,7 +209,7 @@ async function loadDetail() {
   } catch { container.innerHTML = '<p>Course not found.</p>'; }
 }
 
-// ====================== AUTHENTICATION ======================
+// ====================== AUTH ======================
 function setupLogin() {
   const form = document.getElementById('loginForm');
   if (!form) return;
@@ -280,7 +263,6 @@ function showForgotPasswordModal() {
       <button class="btn btn-outline btn-full" id="closeForgotModal" style="margin-top:10px;">Cancel</button>
     </div>`;
   document.body.appendChild(modal);
-
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
   document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
@@ -300,7 +282,6 @@ function showForgotPasswordModal() {
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('sendForgotOtp'), false); }
   });
-
   document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -320,7 +301,6 @@ function showForgotPasswordModal() {
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('verifyForgotOtp'), false); }
   });
-
   document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -445,7 +425,6 @@ function setupDashboard() {
       else if (view === 'myDoubts') loadMyDoubts();
     });
   });
-
   loadDashboardHome();
 }
 
@@ -686,7 +665,7 @@ async function loadMyDoubts() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
-// ====================== ADMIN PANEL (FIXED) ======================
+// ====================== ADMIN PANEL ======================
 function setupAdmin() {
   if (localStorage.getItem('adminToken')) {
     document.getElementById('adminLoginOverlay').style.display = 'none';
@@ -707,8 +686,7 @@ function setupAdmin() {
       });
       const data = await res.json();
       if (res.ok) {
-        // Clear any existing student token
-        localStorage.removeItem('token');
+        localStorage.removeItem('token');   // clear any student token
         localStorage.setItem('adminToken', data.token);
         document.getElementById('adminLoginOverlay').style.display = 'none';
         document.getElementById('adminPanel').style.display = 'flex';
@@ -760,7 +738,7 @@ async function adminStats() {
         <div class="feature-card"><h3>Enrollments</h3><p style="font-size:2rem;">${totalEnrollments}</p></div>
       </div>`;
   } catch {
-    document.getElementById('adminContent').innerHTML = '<p>Error loading stats. Please ensure you are logged in as admin.</p>';
+    document.getElementById('adminContent').innerHTML = '<p>Error loading stats. Ensure you are logged in as admin.</p>';
     showToast('Failed to load admin stats', 'error');
   }
 }
@@ -982,10 +960,8 @@ async function adminDoubts() {
           body: JSON.stringify({ adminReply: reply })
         });
         adminDoubts();
+        showToast('Reply sent', 'success');
       });
     });
   } catch { document.getElementById('adminContent').innerHTML = '<p>Error loading doubts.</p>'; }
 }
-```
-
-**Replace your existing `app.js`** with this version and refresh – the admin panel will work correctly, 403 errors will vanish, and all data will display properly. No changes to the server or HTML are needed.
