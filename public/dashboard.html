@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="dashboard-layout">
+    <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <button class="close-sidebar" onclick="document.getElementById('sidebar').classList.remove('active')">&times;</button>
       <div class="sidebar-brand"><a href="index.html">🎓 SDP</a></div>
@@ -18,9 +19,12 @@
         <li><a href="#" class="sidebar-link" data-view="performance">🏆 Report</a></li>
         <li><a href="#" class="sidebar-link" data-view="askDoubt">❓ Ask Doubt</a></li>
         <li><a href="#" class="sidebar-link" data-view="myDoubts">💬 My Doubts</a></li>
+        <li><a href="#" class="sidebar-link" data-view="sankalpSathi">🤖 Sankalp Sathi</a></li>
         <li><a href="#" class="sidebar-link logout-link" onclick="handleLogout()">🚪 Logout</a></li>
       </ul>
     </aside>
+
+    <!-- Main Content -->
     <main class="dashboard-main">
       <header class="dashboard-topbar">
         <button class="sidebar-toggle-btn" id="sidebarToggle">☰</button>
