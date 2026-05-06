@@ -129,9 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
   waBtn.className = 'floating-whatsapp';
   waBtn.innerHTML = '💬';
   document.body.appendChild(waBtn);
-
-  // AI Chatbot
-  initChatbot();
 });
 
 // ====================== CAROUSEL ======================
@@ -424,6 +421,7 @@ function setupDashboard() {
       else if (view === 'performance') loadPerformanceReport();
       else if (view === 'askDoubt') loadAskDoubtForm();
       else if (view === 'myDoubts') loadMyDoubts();
+      else if (view === 'sankalpSathi') loadSankalpSathi();
     });
   });
   loadDashboardHome();
@@ -805,6 +803,97 @@ async function loadMyDoubts() {
     });
     document.getElementById('dashboardContent').innerHTML = html;
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
+}
+
+// ====================== NEW: SANKALP SATHI (Dashboard Chat) ======================
+async function loadSankalpSathi() {
+  let html = `
+    <div class="sathi-container">
+      <div class="sathi-chat-header">
+        <h3>🤖 Sankalp Sathi</h3>
+        <p>Your AI assistant – ask me anything about the platform!</p>
+      </div>
+      <div class="sathi-messages" id="sathiMessages">
+        <div class="sathi-bot-message">👋 Hi! I'm Sankalp Sathi. How can I help you today?</div>
+      </div>
+      <div class="sathi-input-area">
+        <input type="text" id="sathiInput" placeholder="Type your message..." />
+        <button id="sathiSendBtn">➤</button>
+      </div>
+    </div>`;
+  document.getElementById('dashboardContent').innerHTML = html;
+
+  let conversation = [];
+
+  async function sendMessage() {
+    const input = document.getElementById('sathiInput');
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = '';
+
+    const msgContainer = document.getElementById('sathiMessages');
+    msgContainer.innerHTML += `<div class="sathi-user-message">${message}</div>`;
+    conversation.push({ role: 'user', content: message });
+
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'sathi-bot-message typing';
+    typingDiv.textContent = '...';
+    msgContainer.appendChild(typingDiv);
+    msgContainer.scrollTop = msgContainer.scrollHeight;
+
+    try {
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: conversation })
+      });
+
+      if (!res.ok) throw new Error('Chat error');
+
+      typingDiv.remove();
+
+      const botDiv = document.createElement('div');
+      botDiv.className = 'sathi-bot-message';
+      msgContainer.appendChild(botDiv);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let botReply = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (let line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6);
+            if (jsonStr === '[DONE]') continue;
+            try {
+              const data = JSON.parse(jsonStr);
+              const content = data.choices?.[0]?.delta?.content;
+              if (content) {
+                botReply += content;
+                botDiv.textContent = botReply;
+                msgContainer.scrollTop = msgContainer.scrollHeight;
+              }
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (botReply) {
+        conversation.push({ role: 'assistant', content: botReply });
+      }
+    } catch (err) {
+      typingDiv.textContent = 'Sorry, something went wrong. Please try again.';
+    }
+  }
+
+  document.getElementById('sathiSendBtn').addEventListener('click', sendMessage);
+  document.getElementById('sathiInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
 }
 
 // ====================== ADMIN PANEL ======================
@@ -1223,112 +1312,4 @@ async function adminDoubts() {
   } catch {
     document.getElementById('adminContent').innerHTML = '<p>Error loading doubts.</p>';
   }
-}
-
-// ====================== AI CHATBOT ======================
-function initChatbot() {
-  const chatIcon = document.createElement('div');
-  chatIcon.className = 'chatbot-icon';
-  chatIcon.innerHTML = '🤖';
-  document.body.appendChild(chatIcon);
-
-  const panel = document.createElement('div');
-  panel.className = 'chatbot-panel';
-  panel.innerHTML = `
-    <div class="chatbot-header">
-      <span>🤖 AI Assistant</span>
-      <button class="chatbot-close">&times;</button>
-    </div>
-    <div class="chatbot-messages" id="chatbotMessages">
-      <div class="bot-message">👋 Hi! I'm the Sankalp Digital Pathshala assistant. Ask me anything about our courses, features, or how to use the platform.</div>
-    </div>
-    <div class="chatbot-input-area">
-      <input type="text" id="chatbotInput" placeholder="Type your message..." />
-      <button id="chatbotSend">➤</button>
-    </div>
-  `;
-  document.body.appendChild(panel);
-
-  chatIcon.addEventListener('click', () => {
-    panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-  });
-
-  panel.querySelector('.chatbot-close').addEventListener('click', () => {
-    panel.style.display = 'none';
-  });
-
-  let conversation = [];
-
-  async function sendMessage() {
-    const input = document.getElementById('chatbotInput');
-    const message = input.value.trim();
-    if (!message) return;
-    input.value = '';
-
-    const messagesContainer = document.getElementById('chatbotMessages');
-    messagesContainer.innerHTML += `<div class="user-message">${message}</div>`;
-
-    conversation.push({ role: 'user', content: message });
-
-    const typingDiv = document.createElement('div');
-    typingDiv.className = 'bot-message typing';
-    typingDiv.textContent = '...';
-    messagesContainer.appendChild(typingDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-    try {
-      const res = await fetch(`${API_BASE}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: conversation })
-      });
-
-      if (!res.ok) throw new Error('Chat error');
-
-      typingDiv.remove();
-
-      const botDiv = document.createElement('div');
-      botDiv.className = 'bot-message';
-      messagesContainer.appendChild(botDiv);
-      messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let botReply = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-        for (let line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.slice(6);
-            if (jsonStr === '[DONE]') continue;
-            try {
-              const data = JSON.parse(jsonStr);
-              const content = data.choices?.[0]?.delta?.content;
-              if (content) {
-                botReply += content;
-                botDiv.textContent = botReply;
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-              }
-            } catch (e) {}
-          }
-        }
-      }
-
-      if (botReply) {
-        conversation.push({ role: 'assistant', content: botReply });
-      }
-    } catch (err) {
-      typingDiv.textContent = 'Sorry, something went wrong. Please try again.';
-    }
-  }
-
-  document.getElementById('chatbotSend').addEventListener('click', sendMessage);
-  document.getElementById('chatbotInput').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
 }
