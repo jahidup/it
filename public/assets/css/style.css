@@ -1,7 +1,7 @@
 /* ============================================================
    SANKALP DIGITAL PATHSHALA – PRO PREMIUM STYLESHEET
    Single‑slide horizontal carousel · Sky‑blue accent · Light & trusted
-   – Fixed overlap issues, perfect spacing
+   – Fixed overlap, perfect spacing, advanced animations
    ============================================================ */
 
 /* ---------- RESET & BASE ---------- */
@@ -68,7 +68,7 @@ img {
 .text-center { text-align: center; }
 .mt-3 { margin-top: 30px; }
 
-/* ---------- BUTTONS – enhanced hover ---------- */
+/* ---------- BUTTONS – Enhanced hover ---------- */
 .btn {
   display: inline-block;
   padding: 12px 24px;
@@ -164,7 +164,7 @@ img {
 .btn-success { background: #10b981; color: white; }
 .btn-warning { background: #f59e0b; color: white; }
 
-/* ---------- NAVBAR – frosted glass, auto‑hide ---------- */
+/* ---------- NAVBAR – Frosted glass, auto‑hide ---------- */
 .navbar {
   position: fixed;
   top: 0;
@@ -320,7 +320,7 @@ img {
   100%    { transform: translateX(0); }
 }
 
-/* ---------- PUBLIC COURSE CARDS – advanced hover ---------- */
+/* ---------- PUBLIC COURSE CARDS – Advanced hover ---------- */
 .courses-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -421,7 +421,7 @@ img {
   font-weight: 600;
 }
 
-.enrollment-count { display: none; }
+.enrollment-count { display: none; }   /* hidden as requested */
 
 /* ---------- COURSE DETAIL ---------- */
 .course-detail {
@@ -886,6 +886,7 @@ tr:hover { background: #f0f9ff; }
 .chapters-container { margin-bottom: 20px; }
 .chapter-block { margin-bottom: 30px; }
 .chapter-title { font-size: 1.2rem; color: #0284c7; margin-bottom: 10px; font-weight: 700; }
+
 .discussion-panel {
   background: white;
   border-radius: 20px;
@@ -902,7 +903,12 @@ tr:hover { background: #f0f9ff; }
 .close-panel-btn { background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #64748b; }
 .comments-list { margin-bottom: 20px; }
 .comment-thread { margin-bottom: 15px; }
-.comment { background: #f8fafc; border-radius: 12px; padding: 12px; margin-bottom: 5px; }
+.comment {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 5px;
+}
 .comment-author { font-weight: 600; color: #0f172a; }
 .comment-time { font-size: 0.8rem; color: #94a3b8; margin-left: 8px; }
 .comment-text { margin-top: 5px; }
