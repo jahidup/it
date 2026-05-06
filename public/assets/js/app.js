@@ -55,7 +55,7 @@ function timeAgo(date) {
   return new Date(date).toLocaleDateString();
 }
 
-// ====================== NAVBAR SCROLL HIDE ======================
+// ====================== NAVBAR ======================
 let lastScroll = 0;
 window.addEventListener('scroll', () => {
   const navbar = document.getElementById('navbar');
@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // Floating WhatsApp button
+  // Floating WhatsApp
   const waBtn = document.createElement('a');
   waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
   waBtn.target = '_blank';
@@ -132,9 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ====================== CAROUSEL ======================
-function initCarousel() { /* CSS-driven, no JS needed */ }
+function initCarousel() { /* CSS animation */ }
 
-// ====================== COURSE CARD (no enrollment count) ======================
+// ====================== COURSE CARD ======================
 function cardHTML(course) {
   const disc = course.originalPrice && course.originalPrice > course.price
     ? `<span class="original-price">₹${course.originalPrice}</span> <span class="discount-badge">${Math.round((1 - course.price / course.originalPrice) * 100)}% off</span>`
@@ -149,7 +149,6 @@ function cardHTML(course) {
     </div>`;
 }
 
-// ====================== PUBLIC PAGES LOADERS ======================
 async function loadFeatured() {
   const grid = document.getElementById('featuredCoursesGrid');
   if (!grid) return;
@@ -198,14 +197,14 @@ async function loadDetail() {
       </div>`;
     document.getElementById('buyNowBtn').addEventListener('click', () => {
       const user = getCurrentUser();
-      if (!user) { showToast('Please login first', 'error'); location.href='login.html'; return; }
+      if (!user) { showToast('Please login first', 'error'); location.href = 'login.html'; return; }
       const msg = `Hello Admin,\nName: ${user.name}\nEmail: ${user.email}\nCourse: ${course.title}`;
       window.open(`https://wa.me/+918055698328?text=${encodeURIComponent(msg)}`, '_blank');
     });
   } catch { container.innerHTML = '<p>Course not found.</p>'; }
 }
 
-// ====================== AUTHENTICATION ======================
+// ====================== AUTH ======================
 function setupLogin() {
   const form = document.getElementById('loginForm');
   if (!form) return;
@@ -500,7 +499,7 @@ async function viewCourseChapters(courseId) {
                   <a href="${lec.notesUrl}" target="_blank" class="btn btn-xs btn-outline">📄 Notes</a>
                   ${lec.dppLink ? `<a href="${lec.dppLink}" target="_blank" class="btn btn-xs btn-outline">📝 DPP</a>` : ''}
                   ${!isCompleted ? `<button class="btn btn-xs btn-success mark-complete-btn" data-lecture-id="${lec._id}">✅ Complete</button>` : ''}
-                  <button class="btn btn-xs btn-warning doubt-btn" data-lecture-id="${lec._id}" data-course-id="${course._id}">❓ Doubt</button>
+                  <button class="btn btn-xs btn-warning doubt-btn" data-lecture-id="${lec._id}" data-course-id="${course._id}" data-chapter-id="${ch._id}">❓ Doubt</button>
                 </div>
               </div>`;
           });
@@ -527,13 +526,17 @@ async function viewCourseChapters(courseId) {
       });
     });
     document.querySelectorAll('.doubt-btn').forEach(btn => {
-      btn.addEventListener('click', () => openDiscussionPanel(courseId, btn.dataset.lectureId));
+      btn.addEventListener('click', () => {
+        const chapterId = btn.dataset.chapterId;
+        const lectureId = btn.dataset.lectureId;
+        openDiscussionPanel(courseId, chapterId, lectureId);
+      });
     });
   } catch { showToast('Error loading chapters', 'error'); }
 }
 
-// ====================== DISCUSSION PANEL (YouTube‑style) ======================
-function openDiscussionPanel(courseId, lectureId) {
+// ====================== DISCUSSION PANEL (fixed reply display) ======================
+function openDiscussionPanel(courseId, chapterId, lectureId) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -605,10 +608,11 @@ function openDiscussionPanel(courseId, lectureId) {
           const message = textarea.value.trim();
           if (!message) return;
           setLoading(btn, true);
+          // chapterId is optional for replies, send as null
           await fetch(`${API_BASE}/doubts`, {
             method: 'POST',
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify({ courseId, lectureId, message, parentId })
+            body: JSON.stringify({ courseId, chapterId: null, lectureId, message, parentId })
           });
           showToast('Reply posted', 'success');
           loadDiscussion();
@@ -623,10 +627,11 @@ function openDiscussionPanel(courseId, lectureId) {
     if (!msg) return;
     const btn = overlay.querySelector('#postCommentBtn');
     setLoading(btn, true);
+    // top-level comment includes chapterId
     await fetch(`${API_BASE}/doubts`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, lectureId, message: msg, parentId: null })
+      body: JSON.stringify({ courseId, chapterId, lectureId, message: msg, parentId: null })
     });
     showToast('Comment added', 'success');
     overlay.querySelector('#newCommentMsg').value = '';
@@ -682,7 +687,7 @@ async function loadPerformanceReport() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
-// ====================== UPDATED ASK DOUBT FORM (with chapter) ======================
+// ====================== ASK DOUBT FORM (with chapter) ======================
 async function loadAskDoubtForm() {
   const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
   const courses = await res.json();
