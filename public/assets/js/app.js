@@ -26,13 +26,11 @@ function getCurrentUser() {
   return user ? JSON.parse(user) : null;
 }
 
-// Admin‑only auth headers (avoids using student token)
 function adminAuthHeaders() {
   const token = localStorage.getItem('adminToken');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
-// Student auth headers
 function authHeaders() {
   const token = localStorage.getItem('token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -109,20 +107,14 @@ window.handleAdminLogout = () => {
   window.location.href = 'admin.html';
 };
 
-// ====================== PAGE INITIALISATION ======================
+// ====================== PAGE DETECTION ======================
 document.addEventListener('DOMContentLoaded', () => {
   updateNav();
   const path = window.location.pathname;
 
   if (path.endsWith('index.html') || path === '/' || path.endsWith('/sankalp-digital-pathshala/')) {
     loadFeatured();
-    initCarousel();
-    // Duplicate slides for seamless horizontal scroll
-    const track = document.querySelector('.hero-carousel');
-    if (track) {
-      const slides = track.querySelectorAll('.carousel-slide');
-      slides.forEach(s => track.appendChild(s.cloneNode(true)));
-    }
+    // Carousel: single slide auto‑play (CSS handles it, no JS needed)
   }
   if (path.includes('courses.html')) loadAllCourses();
   if (path.includes('course-detail.html')) loadDetail();
@@ -141,24 +133,19 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ====================== CAROUSEL ======================
-function initCarousel() {
-  // The carousel now works purely with CSS and duplicated slides.
-  // No manual button logic needed – keep for compatibility if needed.
-}
+// The CSS single‑slide animation is used; no JS required.
 
-// ====================== PUBLIC COURSE CARD ======================
+// ====================== COURSE CARD (no enrollment count) ======================
 function cardHTML(course) {
   const disc = course.originalPrice && course.originalPrice > course.price
     ? `<span class="original-price">₹${course.originalPrice}</span> <span class="discount-badge">${Math.round((1 - course.price / course.originalPrice) * 100)}% off</span>`
     : '';
-  const enrolled = course.enrollmentCount ? `👥 ${course.enrollmentCount} enrolled` : '👥 Be the first';
   return `
     <div class="course-card">
       <img src="${course.imageUrl}" alt="${course.title}" style="width:100%; height:180px; object-fit:cover; border-radius:12px; margin-bottom:12px;">
       <h3>${course.title}</h3>
       <p>${course.description}</p>
       <div class="price-container"><span class="price">₹${course.price}</span>${disc}</div>
-      <div class="enrollment-count">${enrolled}</div>
       <a href="course-detail.html?id=${course._id}" class="btn btn-primary btn-full">View Details</a>
     </div>`;
 }
@@ -195,21 +182,30 @@ async function loadDetail() {
         <img src="${course.imageUrl}" style="max-height:400px; object-fit:cover; border-radius:16px; margin-bottom:20px;">
         <h2>${course.title}</h2>
         <p>${course.description}</p>
-        <h3>Lectures</h3>
-        <ul class="lecture-list">${course.lectures.map(l => `<li>📹 ${l.title}</li>`).join('')}</ul>
+        <h3>Chapters & Lectures</h3>
+        <div class="chapters-list">
+          ${course.chapters && course.chapters.length ? course.chapters.map((ch, ci) => `
+            <div class="chapter-item">
+              <h4>Chapter ${ci+1}: ${ch.title}</h4>
+              <ul class="lecture-list">
+                ${ch.lectures.map(lec => `<li>📹 ${lec.title}</li>`).join('')}
+              </ul>
+            </div>
+          `).join('') : '<p>No chapters available yet.</p>'}
+        </div>
         <div style="margin:20px 0;"><span class="price" style="font-size:1.8rem;">₹${course.price}</span>${course.originalPrice && course.originalPrice > course.price ? `<span class="original-price" style="margin-left:10px;">₹${course.originalPrice}</span>` : ''}</div>
         <button class="btn btn-primary btn-lg" id="buyNowBtn">Buy Now</button>
       </div>`;
     document.getElementById('buyNowBtn').addEventListener('click', () => {
       const user = getCurrentUser();
-      if (!user) { showToast('Please login first', 'error'); location.href = 'login.html'; return; }
+      if (!user) { showToast('Please login first', 'error'); location.href='login.html'; return; }
       const msg = `Hello Admin,\nName: ${user.name}\nEmail: ${user.email}\nCourse: ${course.title}`;
       window.open(`https://wa.me/+918055698328?text=${encodeURIComponent(msg)}`, '_blank');
     });
   } catch { container.innerHTML = '<p>Course not found.</p>'; }
 }
 
-// ====================== AUTH ======================
+// ====================== AUTHENTICATION ======================
 function setupLogin() {
   const form = document.getElementById('loginForm');
   if (!form) return;
@@ -222,7 +218,7 @@ function setupLogin() {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
@@ -238,8 +234,8 @@ function setupLogin() {
 
   const forgotLink = document.createElement('a');
   forgotLink.href = '#'; forgotLink.textContent = 'Forgot Password?';
-  forgotLink.style.display = 'block'; forgotLink.style.margin = '15px 0'; forgotLink.style.textAlign = 'center';
-  forgotLink.style.color = '#0284c7'; forgotLink.style.cursor = 'pointer';
+  forgotLink.style.display='block'; forgotLink.style.margin='15px 0'; forgotLink.style.textAlign='center';
+  forgotLink.style.color='#0284c7'; forgotLink.style.cursor='pointer';
   form.appendChild(forgotLink);
   forgotLink.addEventListener('click', (e) => { e.preventDefault(); showForgotPasswordModal(); });
 }
@@ -263,6 +259,7 @@ function showForgotPasswordModal() {
       <button class="btn btn-outline btn-full" id="closeForgotModal" style="margin-top:10px;">Cancel</button>
     </div>`;
   document.body.appendChild(modal);
+
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
   document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
@@ -270,18 +267,19 @@ function showForgotPasswordModal() {
     setLoading(document.getElementById('sendForgotOtp'), true);
     try {
       const res = await fetch(`${API_BASE}/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email })
       });
       const data = await res.json();
       if (res.ok) {
         showToast(data.message, 'success');
-        document.getElementById('forgotOtpSection').style.display = 'block';
+        document.getElementById('forgotOtpSection').style.display='block';
       } else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('sendForgotOtp'), false); }
   });
+
   document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -289,18 +287,19 @@ function showForgotPasswordModal() {
     setLoading(document.getElementById('verifyForgotOtp'), true);
     try {
       const res = await fetch(`${API_BASE}/auth/verify-reset-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email, otp })
       });
       const data = await res.json();
       if (res.ok) {
         showToast('OTP verified!', 'success');
-        document.getElementById('newPasswordSection').style.display = 'block';
+        document.getElementById('newPasswordSection').style.display='block';
       } else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('verifyForgotOtp'), false); }
   });
+
   document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -309,8 +308,8 @@ function showForgotPasswordModal() {
     setLoading(document.getElementById('resetPasswordBtn'), true);
     try {
       const res = await fetch(`${API_BASE}/auth/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email, otp, newPassword })
       });
       const data = await res.json();
@@ -337,14 +336,14 @@ function setupRegister() {
     setLoading(sendBtn, true);
     try {
       const res = await fetch(`${API_BASE}/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email })
       });
       const data = await res.json();
       if (res.ok) {
         showToast(data.message, 'success');
-        document.getElementById('otpSection').style.display = 'block';
+        document.getElementById('otpSection').style.display='block';
       } else showToast(data.message, 'error');
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(sendBtn, false); }
@@ -357,8 +356,8 @@ function setupRegister() {
     setLoading(verifyBtn, true);
     try {
       const res = await fetch(`${API_BASE}/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email, otp })
       });
       const data = await res.json();
@@ -379,8 +378,8 @@ function setupRegister() {
     const otp = document.getElementById('otp').value.trim();
     try {
       const res = await fetch(`${API_BASE}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ name, email, phone, password, otp })
       });
       const data = await res.json();
@@ -454,99 +453,191 @@ async function loadMyCourses() {
     for (let course of courses) {
       const progressRes = await fetch(`${API_BASE}/progress/${course._id}`, { headers: authHeaders() });
       const completedIds = await progressRes.json();
-      const total = course.lectures?.length || 0;
-      const completed = completedIds.filter(id => course.lectures.some(l => l._id === id)).length;
+      let total = 0;
+      (course.chapters || []).forEach(ch => total += ch.lectures.length);
+      const completed = completedIds.filter(id => {
+        return (course.chapters || []).some(ch => ch.lectures.some(l => l._id === id));
+      }).length;
       html += `
         <div class="compact-course-item">
           <div class="course-info"><strong>${course.title}</strong><span class="progress-text">${completed}/${total} completed</span></div>
-          <button class="btn btn-sm btn-outline view-lectures-btn" data-id="${course._id}">📂 View Lectures</button>
+          <button class="btn btn-sm btn-outline view-lectures-btn" data-id="${course._id}">📂 View Chapters</button>
         </div>`;
     }
     html += `</div>`;
     document.getElementById('dashboardContent').innerHTML = html;
     document.querySelectorAll('.view-lectures-btn').forEach(btn => {
-      btn.addEventListener('click', () => viewCourseLectures(btn.dataset.id));
+      btn.addEventListener('click', () => viewCourseChapters(btn.dataset.id));
     });
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error loading courses.</p>'; }
 }
 
-async function viewCourseLectures(courseId) {
+async function viewCourseChapters(courseId) {
   try {
-    const [courseRes, progressRes] = await Promise.all([
-      fetch(`${API_BASE}/courses/${courseId}`),
-      fetch(`${API_BASE}/progress/${courseId}`, { headers: authHeaders() })
-    ]);
-    const course = await courseRes.json();
+    const res = await fetch(`${API_BASE}/courses/${courseId}`);
+    const course = await res.json();
+    const progressRes = await fetch(`${API_BASE}/progress/${courseId}`, { headers: authHeaders() });
     const completedIds = await progressRes.json();
     let html = `<div class="lecture-header"><button class="btn btn-sm btn-outline back-to-courses-btn">← Back</button><h3>${course.title}</h3></div>`;
-    if (course.lectures?.length) {
-      html += `<div class="lecture-list-stacked">`;
-      course.lectures.forEach((lec, i) => {
-        const isCompleted = completedIds.includes(lec._id);
-        html += `
-          <div class="lecture-card">
-            <div class="lecture-info-row">
-              <span class="lecture-title">${i+1}. ${lec.title}</span>
-              <span class="lecture-time">${timeAgo(lec.createdAt)}</span>
-              ${isCompleted ? '<span class="badge complete-badge">✔ Done</span>' : ''}
-            </div>
-            <div class="lecture-actions-row">
-              <a href="${lec.videoUrl}" target="_blank" class="btn btn-xs btn-primary">🎬 Video</a>
-              <a href="${lec.notesUrl}" target="_blank" class="btn btn-xs btn-outline">📄 Notes</a>
-              ${lec.dppLink ? `<a href="${lec.dppLink}" target="_blank" class="btn btn-xs btn-outline">📝 DPP</a>` : ''}
-              ${!isCompleted ? `<button class="btn btn-xs btn-success mark-complete-btn" data-lecture-id="${lec._id}">✅ Complete</button>` : ''}
-              <button class="btn btn-xs btn-warning doubt-btn" data-lecture-id="${lec._id}" data-course-id="${course._id}">❓ Doubt</button>
-            </div>
-          </div>`;
+    if (course.chapters && course.chapters.length) {
+      html += `<div class="chapters-container">`;
+      course.chapters.forEach((ch, chIdx) => {
+        html += `<div class="chapter-block">
+          <h4 class="chapter-title">Chapter ${chIdx+1}: ${ch.title}</h4>
+          <div class="lecture-list-stacked">`;
+        if (ch.lectures.length) {
+          ch.lectures.forEach((lec, lecIdx) => {
+            const isCompleted = completedIds.includes(lec._id);
+            html += `
+              <div class="lecture-card">
+                <div class="lecture-info-row">
+                  <span class="lecture-title">${lecIdx+1}. ${lec.title}</span>
+                  <span class="lecture-time">${timeAgo(lec.createdAt)}</span>
+                  ${isCompleted ? '<span class="badge complete-badge">✔ Done</span>' : ''}
+                </div>
+                <div class="lecture-actions-row">
+                  <a href="${lec.videoUrl}" target="_blank" class="btn btn-xs btn-primary">🎬 Video</a>
+                  <a href="${lec.notesUrl}" target="_blank" class="btn btn-xs btn-outline">📄 Notes</a>
+                  ${lec.dppLink ? `<a href="${lec.dppLink}" target="_blank" class="btn btn-xs btn-outline">📝 DPP</a>` : ''}
+                  ${!isCompleted ? `<button class="btn btn-xs btn-success mark-complete-btn" data-lecture-id="${lec._id}">✅ Complete</button>` : ''}
+                  <button class="btn btn-xs btn-warning doubt-btn" data-lecture-id="${lec._id}" data-course-id="${course._id}">❓ Doubt</button>
+                </div>
+              </div>`;
+          });
+        } else {
+          html += '<p>No lectures in this chapter.</p>';
+        }
+        html += `</div></div>`;
       });
       html += `</div>`;
     } else {
-      html += '<p>No lectures available.</p>';
+      html += '<p>No chapters available.</p>';
     }
     document.getElementById('dashboardContent').innerHTML = html;
+
     document.querySelector('.back-to-courses-btn').addEventListener('click', loadMyCourses);
     document.querySelectorAll('.mark-complete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const lectureId = btn.dataset.lectureId;
         setLoading(btn, true);
-        await fetch(`${API_BASE}/progress/mark-complete/${courseId}/${lectureId}`, { method: 'POST', headers: authHeaders() });
+        await fetch(`${API_BASE}/progress/mark-complete/${courseId}/${lectureId}`, { method:'POST', headers: authHeaders() });
         showToast('Marked as complete', 'success');
-        viewCourseLectures(courseId);
+        viewCourseChapters(courseId);
         setLoading(btn, false);
       });
     });
     document.querySelectorAll('.doubt-btn').forEach(btn => {
-      btn.addEventListener('click', () => openDoubtModal(courseId, btn.dataset.lectureId));
+      btn.addEventListener('click', () => openDiscussionPanel(courseId, btn.dataset.lectureId));
     });
-  } catch { showToast('Error loading lectures', 'error'); }
+  } catch { showToast('Error loading chapters', 'error'); }
 }
 
-function openDoubtModal(courseId, lectureId) {
-  const modal = document.createElement('div');
-  modal.className = 'modal-overlay';
-  modal.innerHTML = `
-    <div class="modal-content" style="max-width:450px;">
-      <h3>Ask a Doubt</h3>
-      <textarea id="doubtMsg" rows="3" placeholder="Type your doubt..." style="width:100%; margin-bottom:10px;"></textarea>
-      <button class="btn btn-primary" id="submitDoubtBtn">Submit</button>
-      <button class="btn btn-outline" id="closeDoubtModal">Cancel</button>
+// ====================== DISCUSSION PANEL (YouTube‑style) ======================
+function openDiscussionPanel(courseId, lectureId) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="discussion-panel">
+      <div class="panel-header">
+        <h3>Doubts & Discussion</h3>
+        <button class="close-panel-btn">&times;</button>
+      </div>
+      <div class="comments-list" id="commentsList">
+        <div class="loading-spinner">Loading comments...</div>
+      </div>
+      <div class="new-comment-box">
+        <textarea id="newCommentMsg" placeholder="Ask a doubt or reply..." rows="2"></textarea>
+        <button class="btn btn-primary btn-sm" id="postCommentBtn">Post</button>
+      </div>
     </div>`;
-  document.body.appendChild(modal);
-  document.getElementById('closeDoubtModal').addEventListener('click', () => modal.remove());
-  document.getElementById('submitDoubtBtn').addEventListener('click', async () => {
-    const message = document.getElementById('doubtMsg').value.trim();
-    if (!message) return showToast('Write something', 'error');
-    setLoading(document.getElementById('submitDoubtBtn'), true);
+  document.body.appendChild(overlay);
+
+  const closeBtn = overlay.querySelector('.close-panel-btn');
+  closeBtn.addEventListener('click', () => overlay.remove());
+
+  async function loadDiscussion() {
+    try {
+      const res = await fetch(`${API_BASE}/doubts/${courseId}/${lectureId}`);
+      const comments = await res.json();
+      const container = overlay.querySelector('#commentsList');
+      if (!comments.length) {
+        container.innerHTML = '<p class="text-center mt-3">No comments yet. Be the first to ask!</p>';
+        return;
+      }
+      let html = '';
+      comments.forEach(d => {
+        html += `
+          <div class="comment-thread">
+            <div class="comment">
+              <span class="comment-author">${d.userName}</span>
+              <span class="comment-time">${timeAgo(d.createdAt)}</span>
+              <p class="comment-text">${d.message}</p>
+              <button class="btn btn-xs btn-outline reply-toggle-btn" data-id="${d._id}">Reply</button>
+              <div class="reply-form" id="replyForm-${d._id}" style="display:none; margin-left:20px;">
+                <textarea class="reply-textarea" rows="2" placeholder="Write a reply..."></textarea>
+                <button class="btn btn-xs btn-primary submit-reply-btn" data-parent-id="${d._id}">Submit</button>
+              </div>
+            </div>
+            <div class="replies" id="replies-${d._id}">
+              ${(d.replies || []).map(r => `
+                <div class="comment reply">
+                  <span class="comment-author">${r.userName}</span>
+                  <span class="comment-time">${timeAgo(r.createdAt)}</span>
+                  <p class="comment-text">${r.message}</p>
+                </div>`).join('')}
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+
+      overlay.querySelectorAll('.reply-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const form = document.getElementById(`replyForm-${id}`);
+          form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        });
+      });
+
+      overlay.querySelectorAll('.submit-reply-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const parentId = btn.dataset.parentId;
+          const textarea = btn.parentElement.querySelector('.reply-textarea');
+          const message = textarea.value.trim();
+          if (!message) return;
+          setLoading(btn, true);
+          await fetch(`${API_BASE}/doubts`, {
+            method:'POST',
+            headers:{...authHeaders(), 'Content-Type':'application/json'},
+            body: JSON.stringify({ courseId, lectureId, message, parentId })
+          });
+          showToast('Reply posted', 'success');
+          loadDiscussion();
+          setLoading(btn, false);
+        });
+      });
+    } catch { showToast('Error loading discussion', 'error'); }
+  }
+
+  overlay.querySelector('#postCommentBtn').addEventListener('click', async () => {
+    const msg = overlay.querySelector('#newCommentMsg').value.trim();
+    if (!msg) return;
+    const btn = overlay.querySelector('#postCommentBtn');
+    setLoading(btn, true);
     await fetch(`${API_BASE}/doubts`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, lectureId, message })
+      method:'POST',
+      headers:{...authHeaders(), 'Content-Type':'application/json'},
+      body: JSON.stringify({ courseId, lectureId, message: msg, parentId: null })
     });
-    showToast('Doubt submitted', 'success');
-    modal.remove();
+    showToast('Comment added', 'success');
+    overlay.querySelector('#newCommentMsg').value = '';
+    loadDiscussion();
+    setLoading(btn, false);
   });
+
+  loadDiscussion();
 }
 
+// ====================== PROGRESS & REPORT ======================
 async function loadProgress() {
   try {
     const enrollRes = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
@@ -559,8 +650,8 @@ async function loadProgress() {
     for (let c of courses) {
       const progressRes = await fetch(`${API_BASE}/progress/${c._id}`, { headers: authHeaders() });
       const ids = await progressRes.json();
-      total += c.lectures.length;
-      completed += ids.filter(id => c.lectures.some(l => l._id === id)).length;
+      total += (c.chapters || []).reduce((sum, ch) => sum + ch.lectures.length, 0);
+      completed += ids.filter(id => (c.chapters || []).some(ch => ch.lectures.some(l => l._id === id))).length;
     }
     const percent = total ? Math.round((completed / total) * 100) : 0;
     document.getElementById('dashboardContent').innerHTML = `
@@ -622,7 +713,11 @@ async function loadAskDoubtForm() {
     if (!course) return;
     const res = await fetch(`${API_BASE}/courses/${courseId}`);
     const fullCourse = await res.json();
-    lectureSelect.innerHTML = fullCourse.lectures.map(l => `<option value="${l._id}">${l.title}</option>`).join('');
+    let allLectures = [];
+    (fullCourse.chapters || []).forEach(ch => {
+      allLectures = allLectures.concat(ch.lectures);
+    });
+    lectureSelect.innerHTML = allLectures.map(l => `<option value="${l._id}">${l.title}</option>`).join('');
   }
   courseSelect.addEventListener('change', loadLectures);
   loadLectures();
@@ -634,9 +729,9 @@ async function loadAskDoubtForm() {
     if (!message) return showToast('Write your doubt', 'error');
     setLoading(document.getElementById('submitDoubtFormBtn'), true);
     await fetch(`${API_BASE}/doubts`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, lectureId, message })
+      method:'POST',
+      headers:{...authHeaders(), 'Content-Type':'application/json'},
+      body: JSON.stringify({ courseId, lectureId, message, parentId: null })
     });
     showToast('Doubt submitted', 'success');
     document.getElementById('doubtMessage').value = '';
@@ -680,13 +775,13 @@ function setupAdmin() {
     const password = document.getElementById('adminPassword').value;
     try {
       const res = await fetch(`${API_BASE}/auth/admin-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ email, password })
       });
       const data = await res.json();
       if (res.ok) {
-        localStorage.removeItem('token');   // clear any student token
+        localStorage.removeItem('token');
         localStorage.setItem('adminToken', data.token);
         document.getElementById('adminLoginOverlay').style.display = 'none';
         document.getElementById('adminPanel').style.display = 'flex';
@@ -717,7 +812,7 @@ function initAdmin() {
       const view = link.dataset.view;
       if (view === 'adminDashboard') adminStats();
       else if (view === 'adminCourses') adminManageCourses();
-      else if (view === 'adminLectures') adminLectureManager();
+      else if (view === 'adminLectures') adminChapterLectureManager();
       else if (view === 'adminStudents') adminStudentList();
       else if (view === 'adminAssign') adminAssignCourse();
       else if (view === 'adminDoubts') adminDoubts();
@@ -766,9 +861,9 @@ async function adminManageCourses() {
     const imageUrl = document.getElementById('imageUrl').value;
     try {
       const res = await fetch(`${API_BASE}/admin/courses`, {
-        method: 'POST',
-        headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, description, price, originalPrice, imageUrl, lectures: [] })
+        method:'POST',
+        headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+        body: JSON.stringify({ title, description, price, originalPrice, imageUrl, chapters: [] })
       });
       if (!res.ok) throw new Error('Failed');
       showToast('Course added!', 'success');
@@ -796,7 +891,7 @@ async function loadCourseList() {
     document.querySelectorAll('.delete-course-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         if (!confirm('Delete?')) return;
-        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method: 'DELETE', headers: adminAuthHeaders() });
+        await fetch(`${API_BASE}/admin/courses/${btn.dataset.id}`, { method:'DELETE', headers: adminAuthHeaders() });
         showToast('Deleted', 'info');
         loadCourseList();
       });
@@ -804,84 +899,167 @@ async function loadCourseList() {
   } catch { list.innerHTML = '<p>Error loading courses.</p>'; }
 }
 
-async function adminLectureManager() {
+// ---------- ADMIN CHAPTER & LECTURE MANAGER ----------
+async function adminChapterLectureManager() {
+  // Select course
   const res = await fetch(`${API_BASE}/courses`);
   const courses = await res.json();
-  let html = `<h3>Manage Lectures</h3><select id="lectureCourseSelect">${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}</select><div id="lectureManagerPanel"></div>`;
+  let html = `
+    <h3>Manage Chapters & Lectures</h3>
+    <div class="form-group">
+      <label>Select Course</label>
+      <select id="courseSelect">${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}</select>
+    </div>
+    <div id="chaptersPanel"></div>`;
   document.getElementById('adminContent').innerHTML = html;
-  const select = document.getElementById('lectureCourseSelect');
-  const panel = document.getElementById('lectureManagerPanel');
-  async function refresh() {
+
+  const select = document.getElementById('courseSelect');
+  const panel = document.getElementById('chaptersPanel');
+
+  async function loadChapters() {
     const courseId = select.value;
     try {
-      const res = await fetch(`${API_BASE}/admin/lectures/${courseId}`, { headers: adminAuthHeaders() });
-      if (!res.ok) throw new Error('Failed');
-      const lectures = await res.json();
-      panel.innerHTML = `
-        <h4>Lectures</h4>
-        ${lectures.map(l => `
-          <div class="lecture-item">
-            <input type="text" value="${l.title}" class="edit-title" data-id="${l._id}">
-            <input type="text" value="${l.videoUrl}" class="edit-video" data-id="${l._id}">
-            <input type="text" value="${l.notesUrl}" class="edit-notes" data-id="${l._id}">
-            <input type="text" value="${l.dppLink||''}" class="edit-dpp" data-id="${l._id}">
-            <input type="text" value="${l.thumbnail||''}" class="edit-thumb" data-id="${l._id}">
-            <button class="btn btn-sm btn-primary save-lecture-btn" data-id="${l._id}">Save</button>
-            <button class="btn btn-sm btn-danger delete-lecture-btn" data-id="${l._id}">Remove</button>
-          </div>`).join('')}
-        <h4>Add Lecture</h4>
-        <form id="addLectureForm">
-          <input type="text" id="lecTitle" placeholder="Title" required>
-          <input type="text" id="lecVideo" placeholder="YouTube URL" required>
-          <input type="text" id="lecNotes" placeholder="Notes Link" required>
-          <input type="text" id="lecDpp" placeholder="DPP Link">
-          <input type="text" id="lecThumbnail" placeholder="Thumbnail URL">
-          <button type="submit" class="btn btn-primary">Add</button>
-        </form>`;
+      const res = await fetch(`${API_BASE}/courses/${courseId}`);
+      const course = await res.json();
+      let chHtml = `<h4>Chapters</h4>`;
+      if (course.chapters && course.chapters.length) {
+        course.chapters.forEach((ch, idx) => {
+          chHtml += `
+            <div class="chapter-admin-item" style="border:1px solid #ddd; padding:15px; margin-bottom:10px; border-radius:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>Chapter ${idx+1}:</strong>
+                <input type="text" class="chapter-title-input" value="${ch.title}" data-chapter-id="${ch._id}" style="flex:1; margin:0 10px; padding:8px;">
+                <button class="btn btn-sm btn-primary save-chapter-btn" data-chapter-id="${ch._id}">Save</button>
+                <button class="btn btn-sm btn-danger delete-chapter-btn" data-chapter-id="${ch._id}">Delete</button>
+              </div>
+              <div class="lectures-of-chapter" style="margin-top:10px; padding-left:20px;">
+                <h5>Lectures</h5>
+                ${ch.lectures.length ? ch.lectures.map(lec => `
+                  <div class="lecture-admin-row" style="display:flex; gap:10px; align-items:center; margin:5px 0;">
+                    <input type="text" class="lecture-title-input" value="${lec.title}" data-lecture-id="${lec._id}" placeholder="Title" style="flex:1;">
+                    <input type="text" class="lecture-video-input" value="${lec.videoUrl}" data-lecture-id="${lec._id}" placeholder="Video URL" style="flex:1;">
+                    <input type="text" class="lecture-notes-input" value="${lec.notesUrl}" data-lecture-id="${lec._id}" placeholder="Notes URL" style="flex:1;">
+                    <input type="text" class="lecture-dpp-input" value="${lec.dppLink || ''}" data-lecture-id="${lec._id}" placeholder="DPP Link" style="flex:1;">
+                    <input type="text" class="lecture-thumb-input" value="${lec.thumbnail || ''}" data-lecture-id="${lec._id}" placeholder="Thumbnail" style="flex:1;">
+                    <button class="btn btn-xs btn-primary save-lecture-btn" data-lecture-id="${lec._id}">Save</button>
+                    <button class="btn btn-xs btn-danger delete-lecture-btn" data-lecture-id="${lec._id}">Del</button>
+                  </div>
+                `).join('') : '<p>No lectures yet.</p>'}
+                <div class="add-lecture-form" style="display:flex; gap:10px; margin-top:8px;">
+                  <input type="text" class="new-lecture-title" placeholder="Title">
+                  <input type="text" class="new-lecture-video" placeholder="Video URL">
+                  <input type="text" class="new-lecture-notes" placeholder="Notes URL">
+                  <input type="text" class="new-lecture-dpp" placeholder="DPP Link">
+                  <input type="text" class="new-lecture-thumb" placeholder="Thumbnail">
+                  <button class="btn btn-xs btn-success add-lecture-btn" data-chapter-id="${ch._id}">+ Add</button>
+                </div>
+              </div>
+            </div>`;
+        });
+      } else {
+        chHtml += '<p>No chapters added yet.</p>';
+      }
+      chHtml += `
+        <div class="add-chapter-form" style="margin-top:20px; display:flex; gap:10px;">
+          <input type="text" id="newChapterTitle" placeholder="New Chapter Title" required>
+          <button class="btn btn-primary" id="addChapterBtn">Add Chapter</button>
+        </div>`;
+      panel.innerHTML = chHtml;
+
+      // Chapter save / delete
+      document.querySelectorAll('.save-chapter-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const chapterId = btn.dataset.chapterId;
+          const input = document.querySelector(`.chapter-title-input[data-chapter-id="${chapterId}"]`);
+          const title = input.value;
+          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}`, {
+            method:'PUT',
+            headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+            body: JSON.stringify({ title })
+          });
+          showToast('Chapter updated', 'success');
+          loadChapters();
+        });
+      });
+      document.querySelectorAll('.delete-chapter-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete chapter and all its lectures?')) return;
+          const chapterId = btn.dataset.chapterId;
+          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}`, { method:'DELETE', headers: adminAuthHeaders() });
+          showToast('Chapter deleted', 'info');
+          loadChapters();
+        });
+      });
+
+      // Lecture save / delete / add
       document.querySelectorAll('.save-lecture-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
-          const id = btn.dataset.id;
-          const title = document.querySelector(`.edit-title[data-id="${id}"]`).value;
-          const videoUrl = document.querySelector(`.edit-video[data-id="${id}"]`).value;
-          const notesUrl = document.querySelector(`.edit-notes[data-id="${id}"]`).value;
-          const dppLink = document.querySelector(`.edit-dpp[data-id="${id}"]`).value;
-          const thumbnail = document.querySelector(`.edit-thumb[data-id="${id}"]`).value;
-          await fetch(`${API_BASE}/admin/lectures/${courseId}/${id}`, {
-            method: 'PUT',
-            headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
+          const lectureId = btn.dataset.lectureId;
+          const row = btn.parentElement;
+          const title = row.querySelector('.lecture-title-input').value;
+          const videoUrl = row.querySelector('.lecture-video-input').value;
+          const notesUrl = row.querySelector('.lecture-notes-input').value;
+          const dppLink = row.querySelector('.lecture-dpp-input').value;
+          const thumbnail = row.querySelector('.lecture-thumb-input').value;
+          // find the parent chapter id
+          const chapterItem = row.closest('.chapter-admin-item');
+          const chapterId = chapterItem.querySelector('.save-chapter-btn').dataset.chapterId;
+          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}/lectures/${lectureId}`, {
+            method:'PUT',
+            headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
             body: JSON.stringify({ title, videoUrl, notesUrl, dppLink, thumbnail })
           });
-          refresh();
           showToast('Lecture updated', 'success');
         });
       });
-      document.querySelectorAll('.delete-lecture-btn').forEach(b => b.addEventListener('click', async () => {
-        await fetch(`${API_BASE}/admin/lectures/${courseId}/${b.dataset.id}`, { method: 'DELETE', headers: adminAuthHeaders() });
-        refresh();
-      }));
-      document.getElementById('addLectureForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const body = {
-          title: document.getElementById('lecTitle').value,
-          videoUrl: document.getElementById('lecVideo').value,
-          notesUrl: document.getElementById('lecNotes').value,
-          dppLink: document.getElementById('lecDpp').value,
-          thumbnail: document.getElementById('lecThumbnail').value
-        };
-        await fetch(`${API_BASE}/admin/lectures/${courseId}`, {
-          method: 'POST',
-          headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify(body)
+      document.querySelectorAll('.delete-lecture-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const lectureId = btn.dataset.lectureId;
+          const chapterItem = btn.closest('.chapter-admin-item');
+          const chapterId = chapterItem.querySelector('.save-chapter-btn').dataset.chapterId;
+          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}/lectures/${lectureId}`, { method:'DELETE', headers: adminAuthHeaders() });
+          showToast('Lecture removed', 'info');
+          loadChapters();
         });
-        refresh();
-        showToast('Lecture added', 'success');
       });
-    } catch { panel.innerHTML = '<p>Error loading lectures.</p>'; }
+      document.querySelectorAll('.add-lecture-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const chapterId = btn.dataset.chapterId;
+          const form = btn.parentElement;
+          const title = form.querySelector('.new-lecture-title').value;
+          const videoUrl = form.querySelector('.new-lecture-video').value;
+          const notesUrl = form.querySelector('.new-lecture-notes').value;
+          const dppLink = form.querySelector('.new-lecture-dpp').value;
+          const thumbnail = form.querySelector('.new-lecture-thumb').value;
+          if (!title || !videoUrl || !notesUrl) return showToast('Fill required fields', 'error');
+          await fetch(`${API_BASE}/admin/courses/${courseId}/chapters/${chapterId}/lectures`, {
+            method:'POST',
+            headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+            body: JSON.stringify({ title, videoUrl, notesUrl, dppLink, thumbnail })
+          });
+          showToast('Lecture added', 'success');
+          loadChapters();
+        });
+      });
+      document.getElementById('addChapterBtn').addEventListener('click', async () => {
+        const title = document.getElementById('newChapterTitle').value.trim();
+        if (!title) return showToast('Chapter title required', 'error');
+        await fetch(`${API_BASE}/admin/courses/${courseId}/chapters`, {
+          method:'POST',
+          headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
+          body: JSON.stringify({ title, lectures: [] })
+        });
+        showToast('Chapter added', 'success');
+        loadChapters();
+      });
+    } catch { panel.innerHTML = '<p>Error loading chapters.</p>'; }
   }
-  select.addEventListener('change', refresh);
-  refresh();
+
+  select.addEventListener('change', loadChapters);
+  loadChapters();
 }
 
+// ---------- ADMIN STUDENTS, ASSIGN, DOUBTS ----------
 async function adminStudentList() {
   try {
     const res = await fetch(`${API_BASE}/admin/students`, { headers: adminAuthHeaders() });
@@ -921,8 +1099,8 @@ async function adminAssignCourse() {
     const courseId = document.getElementById('assignCourse').value;
     try {
       const res = await fetch(`${API_BASE}/admin/assign`, {
-        method: 'POST',
-        headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
         body: JSON.stringify({ userEmail, courseId })
       });
       const data = await res.json();
@@ -955,8 +1133,8 @@ async function adminDoubts() {
         const reply = document.querySelector(`.reply-input[data-id="${id}"]`).value;
         if (!reply) return;
         await fetch(`${API_BASE}/admin/doubts/${id}`, {
-          method: 'PUT',
-          headers: { ...adminAuthHeaders(), 'Content-Type': 'application/json' },
+          method:'PUT',
+          headers:{...adminAuthHeaders(), 'Content-Type':'application/json'},
           body: JSON.stringify({ adminReply: reply })
         });
         adminDoubts();
