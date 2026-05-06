@@ -9,15 +9,18 @@ const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+
+// ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ---------- DATABASE ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ---------- SCHEMAS ----------
+// ========== SCHEMAS ==========
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -65,7 +68,7 @@ const otpSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false },
   purpose: { type: String, enum: ['registration', 'reset'], default: 'registration' }
 });
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+otpSchema.index({ expiresAt很重要: 1 }, { expireAfterSeconds: 0 });
 const OTP = mongoose.model('OTP', otpSchema);
 
 const lectureProgressSchema = new mongoose.Schema({
@@ -89,7 +92,7 @@ const doubtSchema = new mongoose.Schema({
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ---------- MIDDLEWARE ----------
+// ========== MIDDLEWARE ==========
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided.' });
@@ -106,7 +109,7 @@ const adminMiddleware = (req, res, next) => {
   });
 };
 
-// ---------- EMAIL ----------
+// ========== EMAIL SETUP ==========
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
@@ -295,23 +298,7 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// ========== PROGRESS ==========
-app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, async (req, res) => {
-  try {
-    const { courseId, lectureId } = req.params;
-    const userEmail = req.user.email;
-    if (await LectureProgress.findOne({ userEmail, courseId, lectureId }))
-      return res.status(400).json({ message: 'Already completed.' });
-    await new LectureProgress({ userEmail, courseId, lectureId }).save();
-    res.json({ message: 'Lecture marked as complete.' });
-  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
-});
-
-app.get('/api/progress/:courseId', authMiddleware, async (req, res) => {
-  const progress = await LectureProgress.find({ userEmail: req.user.email, courseId: req.params.courseId });
-  res.json(progress.map(p => p.lectureId));
-});
-
+// ========== PROGRESS ROUTES (order matters – specific BEFORE parameterized) ==========
 app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   try {
     const completions = await LectureProgress.find({ userEmail: req.user.email })
@@ -337,7 +324,23 @@ app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== DOUBTS (threaded, with admin reply visible) ==========
+app.get('/api/progress/:courseId', authMiddleware, async (req, res) => {
+  const progress = await LectureProgress.find({ userEmail: req.user.email, courseId: req.params.courseId });
+  res.json(progress.map(p => p.lectureId));
+});
+
+app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, async (req, res) => {
+  try {
+    const { courseId, lectureId } = req.params;
+    const userEmail = req.user.email;
+    if (await LectureProgress.findOne({ userEmail, courseId, lectureId }))
+      return res.status(400).json({ message: 'Already completed.' });
+    await new LectureProgress({ userEmail, courseId, lectureId }).save();
+    res.json({ message: 'Lecture marked as complete.' });
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
+});
+
+// ========== DOUBTS ROUTES (threaded, with admin reply visible) ==========
 app.post('/api/doubts', authMiddleware, async (req, res) => {
   try {
     const { courseId, chapterId, lectureId, message, parentId } = req.body;
@@ -363,7 +366,6 @@ app.get('/api/doubts/:courseId/:lectureId', async (req, res) => {
     .lean();
   for (let d of topLevel) {
     d.replies = await Doubt.find({ parentId: d._id }).sort({ createdAt: 1 }).lean();
-    // Attach admin reply as a special reply if present
     if (d.adminReply && d.adminReply.trim() !== '') {
       d.replies.push({
         _id: 'admin-' + d._id,
@@ -543,7 +545,7 @@ app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
   res.json(doubt);
 });
 
-// ========== AI CHATBOT WITH FALLBACK MODELS ==========
+// ========== AI CHATBOT (Sankalp Sathi) – with fallback models ==========
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) {
