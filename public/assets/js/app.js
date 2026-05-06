@@ -131,8 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.body.appendChild(waBtn);
 });
 
-// ====================== CAROUSEL (CSS handles animation) ======================
-function initCarousel() { /* no JS needed */ }
+// ====================== CAROUSEL ======================
+function initCarousel() { /* CSS-driven, no JS needed */ }
 
 // ====================== COURSE CARD (no enrollment count) ======================
 function cardHTML(course) {
@@ -149,6 +149,7 @@ function cardHTML(course) {
     </div>`;
 }
 
+// ====================== PUBLIC PAGES LOADERS ======================
 async function loadFeatured() {
   const grid = document.getElementById('featuredCoursesGrid');
   if (!grid) return;
@@ -258,6 +259,7 @@ function showForgotPasswordModal() {
       <button class="btn btn-outline btn-full" id="closeForgotModal" style="margin-top:10px;">Cancel</button>
     </div>`;
   document.body.appendChild(modal);
+
   document.getElementById('closeForgotModal').addEventListener('click', () => modal.remove());
   document.getElementById('sendForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
@@ -277,6 +279,7 @@ function showForgotPasswordModal() {
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('sendForgotOtp'), false); }
   });
+
   document.getElementById('verifyForgotOtp').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -296,6 +299,7 @@ function showForgotPasswordModal() {
     } catch { showToast('Network error', 'error'); }
     finally { setLoading(document.getElementById('verifyForgotOtp'), false); }
   });
+
   document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
     const email = document.getElementById('forgotEmail').value.trim();
     const otp = document.getElementById('forgotOtp').value.trim();
@@ -678,6 +682,7 @@ async function loadPerformanceReport() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
+// ====================== UPDATED ASK DOUBT FORM (with chapter) ======================
 async function loadAskDoubtForm() {
   const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
   const courses = await res.json();
@@ -689,11 +694,21 @@ async function loadAskDoubtForm() {
     <h3>Ask a Doubt</h3>
     <div class="form-group">
       <label>Select Course</label>
-      <select id="doubtCourseSelect" style="width:100%; padding:10px;">${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}</select>
+      <select id="doubtCourseSelect" style="width:100%; padding:10px;">
+        ${courses.map(c => `<option value="${c._id}">${c.title}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Select Chapter</label>
+      <select id="doubtChapterSelect" style="width:100%; padding:10px;">
+        <option value="">-- Select Chapter --</option>
+      </select>
     </div>
     <div class="form-group">
       <label>Select Lecture</label>
-      <select id="doubtLectureSelect" style="width:100%; padding:10px;"></select>
+      <select id="doubtLectureSelect" style="width:100%; padding:10px;">
+        <option value="">-- Select Lecture --</option>
+      </select>
     </div>
     <div class="form-group">
       <textarea id="doubtMessage" rows="4" placeholder="Describe your doubt..." style="width:100%;"></textarea>
@@ -702,32 +717,52 @@ async function loadAskDoubtForm() {
   document.getElementById('dashboardContent').innerHTML = html;
 
   const courseSelect = document.getElementById('doubtCourseSelect');
+  const chapterSelect = document.getElementById('doubtChapterSelect');
   const lectureSelect = document.getElementById('doubtLectureSelect');
-  async function loadLectures() {
+
+  let currentChapters = [];
+
+  async function loadChapters() {
     const courseId = courseSelect.value;
+    chapterSelect.innerHTML = '<option value="">-- Select Chapter --</option>';
+    lectureSelect.innerHTML = '<option value="">-- Select Lecture --</option>';
+    if (!courseId) return;
     const course = courses.find(c => c._id === courseId);
     if (!course) return;
     const res = await fetch(`${API_BASE}/courses/${courseId}`);
     const fullCourse = await res.json();
-    let allLectures = [];
-    (fullCourse.chapters || []).forEach(ch => {
-      allLectures = allLectures.concat(ch.lectures);
-    });
-    lectureSelect.innerHTML = allLectures.map(l => `<option value="${l._id}">${l.title}</option>`).join('');
+    currentChapters = fullCourse.chapters || [];
+    chapterSelect.innerHTML += currentChapters.map(ch => `<option value="${ch._id}">${ch.title}</option>`).join('');
   }
-  courseSelect.addEventListener('change', loadLectures);
-  loadLectures();
+
+  function loadLectures() {
+    const chapterId = chapterSelect.value;
+    lectureSelect.innerHTML = '<option value="">-- Select Lecture --</option>';
+    if (!chapterId) return;
+    const chapter = currentChapters.find(ch => ch._id === chapterId);
+    if (chapter) {
+      chapter.lectures.forEach(l => {
+        lectureSelect.innerHTML += `<option value="${l._id}">${l.title}</option>`;
+      });
+    }
+  }
+
+  courseSelect.addEventListener('change', loadChapters);
+  chapterSelect.addEventListener('change', loadLectures);
+  loadChapters();
 
   document.getElementById('submitDoubtFormBtn').addEventListener('click', async () => {
     const courseId = courseSelect.value;
+    const chapterId = chapterSelect.value;
     const lectureId = lectureSelect.value;
     const message = document.getElementById('doubtMessage').value.trim();
     if (!message) return showToast('Write your doubt', 'error');
+    if (!chapterId || !lectureId) return showToast('Please select chapter and lecture', 'error');
     setLoading(document.getElementById('submitDoubtFormBtn'), true);
     await fetch(`${API_BASE}/doubts`, {
       method: 'POST',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, lectureId, message, parentId: null })
+      body: JSON.stringify({ courseId, chapterId, lectureId, message, parentId: null })
     });
     showToast('Doubt submitted', 'success');
     document.getElementById('doubtMessage').value = '';
@@ -895,7 +930,6 @@ async function loadCourseList() {
   } catch { list.innerHTML = '<p>Error loading courses.</p>'; }
 }
 
-// ---------- ADMIN CHAPTER & LECTURE MANAGER ----------
 async function adminChapterLectureManager() {
   const res = await fetch(`${API_BASE}/courses`);
   const courses = await res.json();
@@ -907,10 +941,8 @@ async function adminChapterLectureManager() {
     </div>
     <div id="chaptersPanel"></div>`;
   document.getElementById('adminContent').innerHTML = html;
-
   const select = document.getElementById('courseSelect');
   const panel = document.getElementById('chaptersPanel');
-
   async function loadChapters() {
     const courseId = select.value;
     try {
@@ -1048,12 +1080,10 @@ async function adminChapterLectureManager() {
       });
     } catch { panel.innerHTML = '<p>Error loading chapters.</p>'; }
   }
-
   select.addEventListener('change', loadChapters);
   loadChapters();
 }
 
-// ---------- ADMIN STUDENTS, ASSIGN, DOUBTS ----------
 async function adminStudentList() {
   try {
     const res = await fetch(`${API_BASE}/admin/students`, { headers: adminAuthHeaders() });
@@ -1118,7 +1148,7 @@ async function adminDoubts() {
           <div class="doubt-card">
             <div class="doubt-meta">
               <strong>${d.userName}</strong> (${d.userEmail})<br>
-              <small>📘 ${d.courseTitle} – 📹 ${d.lectureTitle}</small><br>
+              <small>📘 ${d.courseTitle} | 📂 ${d.chapterTitle} | 📹 ${d.lectureTitle}</small><br>
               <small>${new Date(d.createdAt).toLocaleString()}</small>
             </div>
             <p style="margin:10px 0;">${d.message}</p>
