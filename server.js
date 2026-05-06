@@ -20,7 +20,7 @@ mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ========== SCHEMAS ==========
+// ---------- SCHEMAS ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -83,6 +83,7 @@ const doubtSchema = new mongoose.Schema({
   userEmail: { type: String, required: true },
   userName: { type: String, required: true },
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
+  chapterId: { type: String, required: true },
   lectureId: { type: String, required: true },
   parentId: { type: mongoose.Schema.Types.ObjectId, default: null },
   message: { type: String, required: true },
@@ -90,16 +91,14 @@ const doubtSchema = new mongoose.Schema({
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ========== MIDDLEWARE ==========
+// ---------- MIDDLEWARE ----------
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided.' });
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
-  } catch (err) {
-    res.status(401).json({ message: 'Invalid token.' });
-  }
+  } catch (err) { res.status(401).json({ message: 'Invalid token.' }); }
 };
 
 const adminMiddleware = (req, res, next) => {
@@ -109,13 +108,10 @@ const adminMiddleware = (req, res, next) => {
   });
 };
 
-// ========== EMAIL SETUP ==========
+// ---------- EMAIL SETUP ----------
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
 });
 
 const ALLOWED_DOMAINS = [
@@ -124,7 +120,7 @@ const ALLOWED_DOMAINS = [
 ];
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// ========== AUTH ROUTES ==========
+// ---------- AUTH ROUTES ----------
 app.post('/api/auth/send-otp',
   rateLimit({ windowMs: 15 * 60 * 1000, max: 3, message: 'Too many OTP requests.' }),
   async (req, res) => {
@@ -279,13 +275,13 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== COURSE ROUTES ==========
+// ---------- COURSE ROUTES ----------
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
   res.json(courses);
 });
 
-// Specific routes MUST come before /:id
+// Specific routes before parameterized
 app.post('/api/courses/enroll', authMiddleware, async (req, res) => {
   const { courseId } = req.body;
   const userEmail = req.user.email;
@@ -307,7 +303,7 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// ========== PROGRESS ROUTES ==========
+// ---------- PROGRESS ----------
 app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, async (req, res) => {
   try {
     const { courseId, lectureId } = req.params;
@@ -349,15 +345,16 @@ app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== DOUBTS ROUTES ==========
+// ---------- DOUBTS (threaded) ----------
 app.post('/api/doubts', authMiddleware, async (req, res) => {
   try {
-    const { courseId, lectureId, message, parentId } = req.body;
+    const { courseId, chapterId, lectureId, message, parentId } = req.body;
     const user = await User.findOne({ email: req.user.email });
     const doubt = new Doubt({
       userEmail: req.user.email,
       userName: user ? user.name : req.user.email,
       courseId,
+      chapterId,
       lectureId,
       message,
       parentId: parentId || null
@@ -383,7 +380,7 @@ app.get('/api/doubts/my', authMiddleware, async (req, res) => {
   res.json(doubts);
 });
 
-// ========== ADMIN ROUTES ==========
+// ---------- ADMIN ROUTES ----------
 app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   const totalCourses = await Course.countDocuments();
   const totalStudents = await User.countDocuments({ isVerified: true });
@@ -429,7 +426,7 @@ app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
 app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => {
   const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
-  course.chapters.push(req.body);   // { title, lectures: [] }
+  course.chapters.push(req.body);
   await course.save();
   res.json(course.chapters);
 });
@@ -485,7 +482,7 @@ app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adm
   res.json(chapter.lectures);
 });
 
-// Students list with progress count
+// Students list with progress
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   const students = await User.find({}, 'name email phone').lean();
   for (let s of students) {
@@ -506,10 +503,37 @@ app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// Admin doubts (list all top-level)
+// --- UPDATED: Admin doubts with course, chapter, lecture info ---
 app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
-  const doubts = await Doubt.find({ parentId: null }).sort({ createdAt: -1 }).lean();
-  res.json(doubts);
+  try {
+    const topDoubts = await Doubt.find({ parentId: null })
+      .sort({ createdAt: -1 })
+      .lean();
+    const enriched = await Promise.all(topDoubts.map(async (d) => {
+      const course = await Course.findById(d.courseId).lean();
+      let chapterTitle = 'Deleted Chapter';
+      let lectureTitle = 'Deleted Lecture';
+      if (course && course.chapters) {
+        for (let ch of course.chapters) {
+          if (ch._id.toString() === d.chapterId) {
+            chapterTitle = ch.title;
+            const lec = ch.lectures.find(l => l._id.toString() === d.lectureId);
+            if (lec) lectureTitle = lec.title;
+            break;
+          }
+        }
+      }
+      return {
+        ...d,
+        courseTitle: course ? course.title : 'Deleted Course',
+        chapterTitle,
+        lectureTitle
+      };
+    }));
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error.' });
+  }
 });
 
 app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
