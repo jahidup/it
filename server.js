@@ -7,7 +7,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
-const { OpenRouter } = require('@openrouter/sdk');
 
 const app = express();
 
@@ -273,7 +272,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== COURSE ROUTES ==========
+// ========== COURSE ROUTES (order matters) ==========
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
   res.json(courses);
@@ -341,7 +340,7 @@ app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, asy
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== DOUBTS ROUTES ==========
+// ========== DOUBTS ROUTES (threaded, with admin reply visible) ==========
 app.post('/api/doubts', authMiddleware, async (req, res) => {
   try {
     const { courseId, chapterId, lectureId, message, parentId } = req.body;
@@ -538,70 +537,82 @@ app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
   res.json(doubt);
 });
 
-// ========== NEW AI CHATBOT – OpenRouter SDK ==========
+// ========== STABLE AI CHATBOT (no SDK) ==========
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ message: 'Messages array required.' });
   }
 
-  // System instruction for the assistant
   const systemMsg = {
     role: "system",
     content: `You are "Sankalp Sathi", the official AI assistant of Sankalp Digital Pathshala – an online IT institute.
-You help students with questions about courses (Web Development, Python, Digital Marketing, etc.), enrollment, lectures, chapters, progress tracking, doubt discussion, and platform features.
+You help students with questions about courses, enrollment, lectures, chapters, progress tracking, doubt discussion, and platform features.
 Always answer in a friendly, supportive tone in the same language as the user's question.
 If you don't know an answer, politely say you're still learning and suggest contacting support at info@sankalppathshala.com or +91 8055698328.`
   };
 
   const fullMessages = [systemMsg, ...messages];
 
-  // Initialize the OpenRouter client
-  const openrouter = new OpenRouter({ apiKey: process.env.OPENROUTER_API_KEY });
+  const models = [
+    "openai/gpt-oss-120b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemini-flash-1.5-8b:free"
+  ];
 
-  try {
-    const stream = await openrouter.chat.send({
-      model: "openai/gpt-oss-120b:free",
-      messages: fullMessages,
-      stream: true
-    });
+  for (const model of models) {
+    try {
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          messages: fullMessages,
+          stream: true
+        })
+      });
 
-    // Set SSE headers
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    });
+      if (response.ok) {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        });
 
-    for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta?.content;
-      if (content) {
-        // Wrap content in SSE data JSON (same format as previous API to keep frontend unchanged)
-        const sseData = JSON.stringify({ choices: [{ delta: { content } }] });
-        res.write(`data: ${sseData}\n\n`);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) { res.end(); return; }
+          res.write(decoder.decode(value));
+        }
+      } else if (response.status === 429) {
+        console.warn(`Model ${model} rate limited.`);
+        continue;
+      } else {
+        console.error(`Model ${model} returned ${response.status}`);
+        continue;
       }
-      // Optional: usage info from the final chunk – we don't need to forward it
+    } catch (err) {
+      console.error(`Error with model ${model}:`, err.message);
+      continue;
     }
-
-    // Signal end of stream
-    res.write('data: [DONE]\n\n');
-    res.end();
-  } catch (err) {
-    console.error('OpenRouter SDK error:', err);
-
-    // Fallback message in the same SSE format
-    res.writeHead(200, {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
-    });
-
-    const fallback = "I'm having trouble connecting to the AI service right now. Please try again shortly. For immediate help, email info@sankalppathshala.com or call +91 8055698328. 🙏";
-    const sseFallback = JSON.stringify({ choices: [{ delta: { content: fallback } }] });
-    res.write(`data: ${sseFallback}\n\n`);
-    res.write('data: [DONE]\n\n');
-    res.end();
   }
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+
+  const fallbackMessage = "I'm sorry, I'm currently experiencing high demand. Please try again in a moment, or contact our support team at info@sankalppathshala.com / +91 8055698328 for immediate help. 🙏";
+  const chunk = JSON.stringify({ choices: [{ delta: { content: fallbackMessage } }] });
+  res.write(`data: ${chunk}\n\n`);
+  res.write('data: [DONE]\n\n');
+  res.end();
 });
 
 // ========== FRONTEND FALLBACK ==========
