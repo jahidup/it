@@ -7,17 +7,21 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
+const { OpenRouter } = require('@openrouter/sdk');
 
 const app = express();
+
+// ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ---------- DATABASE ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ---------- SCHEMAS ----------
+// ========== SCHEMAS ==========
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -269,7 +273,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== COURSE ROUTES (order matters) ==========
+// ========== COURSE ROUTES ==========
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
   res.json(courses);
@@ -295,7 +299,7 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// ========== PROGRESS ROUTES (specific BEFORE parameterized) ==========
+// ========== PROGRESS ROUTES (specific before parameterized) ==========
 app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   try {
     const completions = await LectureProgress.find({ userEmail: req.user.email })
@@ -337,7 +341,7 @@ app.post('/api/progress/mark-complete/:courseId/:lectureId', authMiddleware, asy
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== DOUBTS ROUTES (threaded, with admin reply visible) ==========
+// ========== DOUBTS ROUTES ==========
 app.post('/api/doubts', authMiddleware, async (req, res) => {
   try {
     const { courseId, chapterId, lectureId, message, parentId } = req.body;
@@ -390,7 +394,6 @@ app.get('/api/admin/stats', adminMiddleware, async (req, res) => {
   res.json({ totalCourses, totalStudents, totalEnrollments });
 });
 
-// Courses CRUD
 app.post('/api/admin/courses', adminMiddleware, async (req, res) => {
   try {
     const { title, description, price, originalPrice, imageUrl, chapters } = req.body;
@@ -424,7 +427,6 @@ app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   res.json({ message: 'Course deleted.' });
 });
 
-// Chapters
 app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => {
   const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
@@ -451,7 +453,6 @@ app.delete('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async 
   res.json(course.chapters);
 });
 
-// Lectures inside a chapter
 app.post('/api/admin/courses/:id/chapters/:chapterId/lectures', adminMiddleware, async (req, res) => {
   const course = await Course.findById(req.params.id);
   if (!course) return res.status(404).json({ message: 'Course not found.' });
@@ -484,7 +485,6 @@ app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adm
   res.json(chapter.lectures);
 });
 
-// Students list with progress
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   const students = await User.find({}, 'name email phone').lean();
   for (let s of students) {
@@ -504,17 +504,13 @@ app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// Admin doubts – enriched with course, chapter, lecture titles
 app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
   try {
-    const topDoubts = await Doubt.find({ parentId: null })
-      .sort({ createdAt: -1 })
-      .lean();
+    const topDoubts = await Doubt.find({ parentId: null }).sort({ createdAt: -1 }).lean();
     const enriched = await Promise.all(topDoubts.map(async (d) => {
       const course = await Course.findById(d.courseId).lean();
-      let chapterTitle = 'Deleted Chapter';
-      let lectureTitle = 'Deleted Lecture';
-      if (course && course.chapters) {
+      let chapterTitle = 'Deleted Chapter', lectureTitle = 'Deleted Lecture';
+      if (course?.chapters) {
         for (let ch of course.chapters) {
           if (ch._id.toString() === d.chapterId) {
             chapterTitle = ch.title;
@@ -526,7 +522,7 @@ app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
       }
       return {
         ...d,
-        courseTitle: course ? course.title : 'Deleted Course',
+        courseTitle: course?.title || 'Deleted Course',
         chapterTitle,
         lectureTitle
       };
@@ -542,74 +538,70 @@ app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
   res.json(doubt);
 });
 
-// ========== AI CHATBOT (Sankalp Sathi) – with fallback models ==========
+// ========== NEW AI CHATBOT – OpenRouter SDK ==========
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ message: 'Messages array required.' });
   }
 
+  // System instruction for the assistant
   const systemMsg = {
     role: "system",
-    content: `You are a helpful AI assistant for Sankalp Digital Pathshala, an online IT institute. 
-The platform offers courses like Complete Web Development, Python for Data Science, Digital Marketing, etc. 
-Students can register, buy courses, watch lectures organised in chapters, mark lectures as completed, ask doubts in a discussion panel, and track progress. 
-Admins manage courses, chapters, lectures, student enrollments, and reply to doubts. 
-Provide friendly, concise, and accurate answers about the platform, courses, pricing, features, and how to use them. 
-If you don't know something, say you're an AI and suggest contacting support at info@sankalppathshala.com or +91 8055698328.`
+    content: `You are "Sankalp Sathi", the official AI assistant of Sankalp Digital Pathshala – an online IT institute.
+You help students with questions about courses (Web Development, Python, Digital Marketing, etc.), enrollment, lectures, chapters, progress tracking, doubt discussion, and platform features.
+Always answer in a friendly, supportive tone in the same language as the user's question.
+If you don't know an answer, politely say you're still learning and suggest contacting support at info@sankalppathshala.com or +91 8055698328.`
   };
 
   const fullMessages = [systemMsg, ...messages];
 
-  const models = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "meta-llama/llama-3.2-3b-instruct:free",
-    "google/gemini-flash-1.5-8b:free"
-  ];
+  // Initialize the OpenRouter client
+  const openrouter = new OpenRouter({ apiKey: process.env.OPENROUTER_API_KEY });
 
-  for (const model of models) {
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model,
-          messages: fullMessages,
-          stream: true
-        })
-      });
+  try {
+    const stream = await openrouter.chat.send({
+      model: "openai/gpt-oss-120b:free",
+      messages: fullMessages,
+      stream: true
+    });
 
-      if (response.ok) {
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive'
-        });
+    // Set SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) { res.end(); return; }
-          res.write(decoder.decode(value));
-        }
-      } else if (response.status === 429) {
-        console.warn(`Model ${model} rate limited.`);
-        continue;
-      } else {
-        console.error(`Model ${model} error:`, await response.text());
-        break;
+    for await (const chunk of stream) {
+      const content = chunk.choices?.[0]?.delta?.content;
+      if (content) {
+        // Wrap content in SSE data JSON (same format as previous API to keep frontend unchanged)
+        const sseData = JSON.stringify({ choices: [{ delta: { content } }] });
+        res.write(`data: ${sseData}\n\n`);
       }
-    } catch (err) {
-      console.error(`Error with model ${model}:`, err);
-      break;
+      // Optional: usage info from the final chunk – we don't need to forward it
     }
-  }
 
-  return res.status(503).json({ message: 'AI service temporarily unavailable. Please try again later.' });
+    // Signal end of stream
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (err) {
+    console.error('OpenRouter SDK error:', err);
+
+    // Fallback message in the same SSE format
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    });
+
+    const fallback = "I'm having trouble connecting to the AI service right now. Please try again shortly. For immediate help, email info@sankalppathshala.com or call +91 8055698328. 🙏";
+    const sseFallback = JSON.stringify({ choices: [{ delta: { content: fallback } }] });
+    res.write(`data: ${sseFallback}\n\n`);
+    res.write('data: [DONE]\n\n');
+    res.end();
+  }
 });
 
 // ========== FRONTEND FALLBACK ==========
