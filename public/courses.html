@@ -1,112 +1,50 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>All Courses – Sankalp Digital Pathshala</title>
-    <meta name="description" content="Browse 50+ IT courses with expert instructors, hands‑on projects, and recognised certifications. Start learning today!">
-    <link rel="stylesheet" href="assets/css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All Courses – Sankalp Digital Pathshala</title>
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- Navbar (unchanged) -->
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="index.html" class="nav-logo"><span class="logo-icon">🎓</span> Sankalp Digital Pathshala</a>
-            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
-            <ul class="nav-links" id="navLinks">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="courses.html" class="active">Courses</a></li>
-                <li id="navLogin"><a href="login.html">Login</a></li>
-                <li id="navRegister"><a href="register.html">Register</a></li>
-                <li id="navDashboard" style="display:none;"><a href="dashboard.html">Dashboard</a></li>
-                <li id="navAdmin" style="display:none;"><a href="admin.html">Admin</a></li>
-                <li id="navLogout" style="display:none;"><a href="#" onclick="handleLogout()">Logout</a></li>
-            </ul>
-        </div>
-    </nav>
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo"><span class="logo-icon">🎓</span> Sankalp Digital Pathshala</a>
+      <button class="nav-toggle" id="navToggle">☰</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="courses.html" class="active">Courses</a></li>
+        <li id="navLogin"><a href="login.html">Login</a></li>
+        <li id="navRegister"><a href="register.html">Register</a></li>
+        <li id="navDashboard" style="display:none;"><a href="dashboard.html">Dashboard</a></li>
+        <li id="navAdmin" style="display:none;"><a href="admin.html">Admin</a></li>
+        <li id="navLogout" style="display:none;"><a href="#" onclick="handleLogout()">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
 
-    <!-- Courses Hero -->
-    <section class="courses-hero-premium">
-        <div class="hero-bg-pattern"></div>
-        <div class="courses-hero-content">
-            <span class="hero-badge">📚 50+ Courses Available</span>
-            <h1 class="hero-title">Find the Perfect <span class="highlight">Course</span> for Your Career</h1>
-            <p class="hero-subtitle">From Web Development to Data Science, choose from our extensive library of expert‑led programmes designed to give you job‑ready skills.</p>
-            <div class="courses-hero-search">
-                <input type="text" class="search-input-premium" placeholder="Search courses by name or skill...">
-                <button class="btn btn-primary-premium">🔍 Search</button>
-            </div>
-        </div>
-        <div class="hero-particles" id="coursesHeroParticles"></div>
-    </section>
+  <main class="section">
+    <div class="container">
+      <h2 class="section-title">All Courses</h2>
+      <p class="section-subtitle">Browse our complete catalog of IT courses</p>
+      <div class="courses-grid" id="allCoursesGrid">
+        <div class="loading-spinner">Loading courses...</div>
+      </div>
+    </div>
+  </main>
 
-    <!-- Filter Tags -->
-    <section class="section-premium filter-section">
-        <div class="container-premium">
-            <div class="filter-tags">
-                <button class="filter-tag active">All</button>
-                <button class="filter-tag">Web Development</button>
-                <button class="filter-tag">Data Science</button>
-                <button class="filter-tag">Cloud</button>
-                <button class="filter-tag">Cybersecurity</button>
-                <button class="filter-tag">UI/UX Design</button>
-                <button class="filter-tag">Mobile Apps</button>
-            </div>
-        </div>
-    </section>
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand"><h3>🎓 Sankalp Digital Pathshala</h3><p>Empowering learners with quality IT education.</p></div>
+        <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="courses.html">Courses</a></li><li><a href="login.html">Login</a></li><li><a href="register.html">Register</a></li></ul></div>
+        <div class="footer-contact"><h4>Contact Us</h4><p>📧 info@sankalppathshala.com</p><p>📞 +91 8055698328</p></div>
+      </div>
+      <div class="footer-bottom"><p>&copy; 2026 Sankalp Digital Pathshala. All rights reserved.</p></div>
+    </div>
+  </footer>
 
-    <!-- Courses Grid -->
-    <section class="section-premium courses-grid-section">
-        <div class="container-premium">
-            <div class="courses-grid-premium" id="allCoursesGrid">
-                <div class="loading-shimmer"></div>
-                <div class="loading-shimmer"></div>
-                <div class="loading-shimmer"></div>
-                <div class="loading-shimmer"></div>
-                <div class="loading-shimmer"></div>
-                <div class="loading-shimmer"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer (unchanged) -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand"><h3>🎓 Sankalp Digital Pathshala</h3><p>Empowering learners with quality IT education.</p></div>
-                <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="courses.html">Courses</a></li><li><a href="login.html">Login</a></li><li><a href="register.html">Register</a></li></ul></div>
-                <div class="footer-contact"><h4>Contact Us</h4><p>📧 info@sankalppathshala.com</p><p>📞 +91 8055698328</p></div>
-            </div>
-            <div class="footer-bottom"><p>&copy; 2026 Sankalp Digital Pathshala. All rights reserved.</p></div>
-        </div>
-    </footer>
-
-    <div class="toast-container" id="toastContainer"></div>
-    <script src="assets/js/app.js"></script>
-    <script>
-        // Hero particles
-        (function() {
-            const particlesContainer = document.getElementById('coursesHeroParticles');
-            for (let i = 0; i < 25; i++) {
-                const particle = document.createElement('div');
-                particle.classList.add('hero-particle');
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.top = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 6 + 's';
-                particle.style.animationDuration = (4 + Math.random() * 8) + 's';
-                particle.style.width = (2 + Math.random() * 5) + 'px';
-                particle.style.height = particle.style.width;
-                particlesContainer.appendChild(particle);
-            }
-
-            // Simple filter visual (replace with actual filtering when ready)
-            document.querySelectorAll('.filter-tag').forEach(tag => {
-                tag.addEventListener('click', function() {
-                    document.querySelectorAll('.filter-tag').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                });
-            });
-        })();
-    </script>
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="assets/js/app.js"></script>
 </body>
 </html>
