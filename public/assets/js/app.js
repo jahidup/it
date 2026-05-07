@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (path.includes('dashboard.html')) setupDashboard();
   if (path.includes('admin.html')) setupAdmin();
 
-  // Floating WhatsApp button
+  // Floating WhatsApp
   const waBtn = document.createElement('a');
   waBtn.href = 'https://wa.me/+918055698328?text=Hi%20Sankalp%20Digital%20Pathshala';
   waBtn.target = '_blank';
@@ -130,9 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
   waBtn.innerHTML = '💬';
   document.body.appendChild(waBtn);
 });
-
-// ====================== CAROUSEL ======================
-function initCarousel() { /* CSS handles it */ }
 
 // ====================== COURSE CARD ======================
 function cardHTML(course) {
@@ -536,6 +533,7 @@ async function viewCourseChapters(courseId) {
   } catch { showToast('Error loading chapters', 'error'); }
 }
 
+// ====================== DISCUSSION PANEL (YouTube‑style) ======================
 function openDiscussionPanel(courseId, chapterId, lectureId) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -651,6 +649,7 @@ function openDiscussionPanel(courseId, chapterId, lectureId) {
   loadDiscussion();
 }
 
+// ====================== PROGRESS & REPORT ======================
 async function loadProgress() {
   try {
     const enrollRes = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
@@ -695,6 +694,7 @@ async function loadPerformanceReport() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
+// ====================== ASK DOUBT FORM (with chapter) ======================
 async function loadAskDoubtForm() {
   const res = await fetch(`${API_BASE}/courses/my-enrollments`, { headers: authHeaders() });
   const courses = await res.json();
@@ -803,7 +803,54 @@ async function loadMyDoubts() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
-// ====================== SANKALP SATHI (Dashboard Chat) ======================
+// ====================== SANKALP SATHI (Enhanced Formatting) ======================
+function formatAIResponse(text) {
+  let paragraphs = text.split(/\n\n+/);
+  let html = '';
+  paragraphs.forEach(para => {
+    para = para.trim();
+    if (!para) return;
+
+    if (para.includes('|') && para.includes('---')) {
+      let rows = para.split('\n');
+      let tableHtml = '<table>';
+      rows.forEach((row, idx) => {
+        if (row.trim().startsWith('|') && row.includes('---')) return;
+        let cells = row.split('|').filter(cell => cell.trim() !== '');
+        let cellTag = idx === 0 ? 'th' : 'td';
+        tableHtml += '<tr>';
+        cells.forEach(cell => {
+          tableHtml += `<${cellTag}>${cell.trim()}</${cellTag}>`;
+        });
+        tableHtml += '</tr>';
+      });
+      tableHtml += '</table>';
+      html += tableHtml;
+      return;
+    }
+
+    if (/^(\d+[.)]|\-|\*)\s/.test(para)) {
+      let items = para.split('\n').filter(line => line.trim());
+      let listHtml = '<ul>';
+      items.forEach(item => {
+        item = item.replace(/^(\d+[.)]|\-|\*)\s*/, '');
+        listHtml += `<li>${item.trim()}</li>`;
+      });
+      listHtml += '</ul>';
+      html += listHtml;
+      return;
+    }
+
+    let line = para.replace(/\n/g, '<br>');
+    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    line = line.replace(/`(.*?)`/g, '<code>$1</code>');
+    html += `<p>${line}</p>`;
+  });
+
+  return html;
+}
+
 async function loadSankalpSathi() {
   let html = `
     <div class="sathi-container">
@@ -812,7 +859,7 @@ async function loadSankalpSathi() {
         <p>Your AI assistant – ask me anything about the platform!</p>
       </div>
       <div class="sathi-messages" id="sathiMessages">
-        <div class="sathi-bot-message">👋 Hi! I'm Sankalp Sathi, created by <strong>NexGenAiTech</strong> to help you in your learning journey. How can I assist you today?</div>
+        <div class="sathi-bot-message">👋 Hi! I'm Sankalp Sathi. How can I help you today?</div>
       </div>
       <div class="sathi-input-area">
         <input type="text" id="sathiInput" placeholder="Type your message..." />
@@ -846,12 +893,13 @@ async function loadSankalpSathi() {
         body: JSON.stringify({ messages: conversation })
       });
 
-      if (!res.ok) throw new Error('Chat error');
+      if (!res.ok) {
+        throw new Error('Network response was not ok');
+      }
 
       typingDiv.remove();
-
       const botDiv = document.createElement('div');
-      botDiv.className = 'sathi-bot-message';
+      botDiv.className = 'sathi-bot-message formatted';
       msgContainer.appendChild(botDiv);
 
       const reader = res.body.getReader();
@@ -881,10 +929,15 @@ async function loadSankalpSathi() {
       }
 
       if (botReply) {
+        const formatted = formatAIResponse(botReply);
+        const poweredBy = '<div class="powered-by">⚡ Powered by NexGenAiTech</div>';
+        botDiv.innerHTML = formatted + poweredBy;
         conversation.push({ role: 'assistant', content: botReply });
+      } else {
+        botDiv.innerHTML = "I'm sorry, I couldn't generate a response. Please try again.";
       }
     } catch (err) {
-      typingDiv.textContent = 'Sorry, something went wrong. Please try again.';
+      typingDiv.textContent = "I'm having trouble connecting. Please check your internet or try again later. 😔";
     }
   }
 
@@ -1046,7 +1099,6 @@ async function adminChapterLectureManager() {
   document.getElementById('adminContent').innerHTML = html;
   const select = document.getElementById('courseSelect');
   const panel = document.getElementById('chaptersPanel');
-
   async function loadChapters() {
     const courseId = select.value;
     try {
@@ -1097,7 +1149,6 @@ async function adminChapterLectureManager() {
         </div>`;
       panel.innerHTML = chHtml;
 
-      // Chapter save / delete
       document.querySelectorAll('.save-chapter-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const chapterId = btn.dataset.chapterId;
@@ -1122,7 +1173,6 @@ async function adminChapterLectureManager() {
         });
       });
 
-      // Lecture save / delete / add
       document.querySelectorAll('.save-lecture-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const lectureId = btn.dataset.lectureId;
