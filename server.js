@@ -9,18 +9,15 @@ const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
-
-// ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------- DATABASE ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
 
-// ========== SCHEMAS ==========
+// ---------- SCHEMAS ----------
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true, lowercase: true },
@@ -68,7 +65,7 @@ const otpSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false },
   purpose: { type: String, enum: ['registration', 'reset'], default: 'registration' }
 });
-otpSchema.index({ expiresAt很重要: 1 }, { expireAfterSeconds: 0 });
+otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 const OTP = mongoose.model('OTP', otpSchema);
 
 const lectureProgressSchema = new mongoose.Schema({
@@ -92,7 +89,7 @@ const doubtSchema = new mongoose.Schema({
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ========== MIDDLEWARE ==========
+// ---------- MIDDLEWARE ----------
 const authMiddleware = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ message: 'No token provided.' });
@@ -109,7 +106,7 @@ const adminMiddleware = (req, res, next) => {
   });
 };
 
-// ========== EMAIL SETUP ==========
+// ---------- EMAIL ----------
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
@@ -298,7 +295,7 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// ========== PROGRESS ROUTES (order matters – specific BEFORE parameterized) ==========
+// ========== PROGRESS ROUTES (specific BEFORE parameterized) ==========
 app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   try {
     const completions = await LectureProgress.find({ userEmail: req.user.email })
@@ -564,14 +561,11 @@ If you don't know something, say you're an AI and suggest contacting support at 
 
   const fullMessages = [systemMsg, ...messages];
 
-  // Fallback list of free models
   const models = [
     "meta-llama/llama-3.3-70b-instruct:free",
     "meta-llama/llama-3.2-3b-instruct:free",
     "google/gemini-flash-1.5-8b:free"
   ];
-
-  let lastError = null;
 
   for (const model of models) {
     try {
@@ -589,7 +583,6 @@ If you don't know something, say you're an AI and suggest contacting support at 
       });
 
       if (response.ok) {
-        // Stream successful response
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -604,23 +597,18 @@ If you don't know something, say you're an AI and suggest contacting support at 
           res.write(decoder.decode(value));
         }
       } else if (response.status === 429) {
-        lastError = 'Rate limited, trying next model...';
         console.warn(`Model ${model} rate limited.`);
-        continue; // try next model
+        continue;
       } else {
-        const errorText = await response.text();
-        lastError = errorText;
-        console.error(`Model ${model} error:`, errorText);
-        break; // non-429 error, stop trying
+        console.error(`Model ${model} error:`, await response.text());
+        break;
       }
     } catch (err) {
-      lastError = err.message;
       console.error(`Error with model ${model}:`, err);
       break;
     }
   }
 
-  // If all models failed
   return res.status(503).json({ message: 'AI service temporarily unavailable. Please try again later.' });
 });
 
