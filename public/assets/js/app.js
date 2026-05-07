@@ -803,52 +803,90 @@ async function loadMyDoubts() {
   } catch { document.getElementById('dashboardContent').innerHTML = '<p>Error.</p>'; }
 }
 
-// ====================== SANKALP SATHI (Enhanced Formatting) ======================
+// ====================== SANKALP SATHI (Fully Formatted) ======================
 function formatAIResponse(text) {
-  let paragraphs = text.split(/\n\n+/);
-  let html = '';
-  paragraphs.forEach(para => {
-    para = para.trim();
-    if (!para) return;
+  // Escape HTML entities first
+  let escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 
-    if (para.includes('|') && para.includes('---')) {
-      let rows = para.split('\n');
+  let lines = escaped.split('\n');
+  let result = [];
+  let i = 0;
+  while (i < lines.length) {
+    // Table detection
+    if (lines[i].includes('|') && lines[i+1] && lines[i+1].includes('---')) {
       let tableHtml = '<table>';
-      rows.forEach((row, idx) => {
-        if (row.trim().startsWith('|') && row.includes('---')) return;
-        let cells = row.split('|').filter(cell => cell.trim() !== '');
-        let cellTag = idx === 0 ? 'th' : 'td';
+      let headerRow = lines[i];
+      tableHtml += '<tr>';
+      headerRow.split('|').filter(c => c.trim() !== '').forEach(cell => {
+        tableHtml += `<th>${cell.trim()}</th>`;
+      });
+      tableHtml += '</tr>';
+      i += 2;
+      while (i < lines.length && lines[i].includes('|')) {
         tableHtml += '<tr>';
-        cells.forEach(cell => {
-          tableHtml += `<${cellTag}>${cell.trim()}</${cellTag}>`;
+        lines[i].split('|').filter(c => c.trim() !== '').forEach(cell => {
+          tableHtml += `<td>${cell.trim()}</td>`;
         });
         tableHtml += '</tr>';
-      });
+        i++;
+      }
       tableHtml += '</table>';
-      html += tableHtml;
-      return;
+      result.push(tableHtml);
+      continue;
     }
 
-    if (/^(\d+[.)]|\-|\*)\s/.test(para)) {
-      let items = para.split('\n').filter(line => line.trim());
-      let listHtml = '<ul>';
-      items.forEach(item => {
-        item = item.replace(/^(\d+[.)]|\-|\*)\s*/, '');
-        listHtml += `<li>${item.trim()}</li>`;
-      });
-      listHtml += '</ul>';
-      html += listHtml;
-      return;
+    // Headings
+    if (/^#{1,3}\s/.test(lines[i])) {
+      let level = lines[i].match(/^(#{1,3})/)[1].length;
+      let content = lines[i].replace(/^#{1,3}\s*/, '').trim();
+      result.push(`<h${level}>${content}</h${level}>`);
+      i++;
+      continue;
     }
 
-    let line = para.replace(/\n/g, '<br>');
-    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    line = line.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    line = line.replace(/`(.*?)`/g, '<code>$1</code>');
-    html += `<p>${line}</p>`;
-  });
+    // Unordered list
+    if (/^[\-\*]\s/.test(lines[i])) {
+      let listItems = [];
+      while (i < lines.length && /^[\-\*]\s/.test(lines[i])) {
+        listItems.push(lines[i].replace(/^[\-\*]\s*/, '').trim());
+        i++;
+      }
+      result.push('<ul>' + listItems.map(item => `<li>${item}</li>`).join('') + '</ul>');
+      continue;
+    }
 
-  return html;
+    // Ordered list
+    if (/^\d+[.)]\s/.test(lines[i])) {
+      let listItems = [];
+      while (i < lines.length && /^\d+[.)]\s/.test(lines[i])) {
+        listItems.push(lines[i].replace(/^\d+[.)]\s*/, '').trim());
+        i++;
+      }
+      result.push('<ol>' + listItems.map(item => `<li>${item}</li>`).join('') + '</ol>');
+      continue;
+    }
+
+    // Regular paragraph
+    let paraLines = [];
+    while (i < lines.length && lines[i].trim() !== '') {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    if (paraLines.length > 0) {
+      let paragraph = paraLines.join('<br>');
+      paragraph = paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      paragraph = paragraph.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      paragraph = paragraph.replace(/`(.*?)`/g, '<code>$1</code>');
+      paragraph = paragraph.replace(/\\\(|\\\)/g, '');
+      result.push(`<p>${paragraph}</p>`);
+    } else {
+      i++;
+    }
+  }
+  return result.join('');
 }
 
 async function loadSankalpSathi() {
@@ -893,9 +931,7 @@ async function loadSankalpSathi() {
         body: JSON.stringify({ messages: conversation })
       });
 
-      if (!res.ok) {
-        throw new Error('Network response was not ok');
-      }
+      if (!res.ok) throw new Error('Network response was not ok');
 
       typingDiv.remove();
       const botDiv = document.createElement('div');
@@ -1019,10 +1055,7 @@ async function adminStats() {
         <div class="feature-card"><h3>Students</h3><p style="font-size:2rem;">${totalStudents}</p></div>
         <div class="feature-card"><h3>Enrollments</h3><p style="font-size:2rem;">${totalEnrollments}</p></div>
       </div>`;
-  } catch {
-    document.getElementById('adminContent').innerHTML = '<p>Error loading stats. Ensure you are logged in as admin.</p>';
-    showToast('Failed to load admin stats', 'error');
-  }
+  } catch { showToast('Error loading stats', 'error'); }
 }
 
 async function adminManageCourses() {
