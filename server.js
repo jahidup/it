@@ -92,7 +92,7 @@ const doubtSchema = new mongoose.Schema({
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ========== NEW TEST SCHEMAS ==========
+// ========== TEST SCHEMAS ==========
 const questionSchema = new mongoose.Schema({
   type: { type: String, enum: ['mcq', 'numerical'], required: true },
   questionText: { type: String, required: true },
@@ -107,9 +107,11 @@ const testSchema = new mongoose.Schema({
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', required: true },
   title: { type: String, required: true },
   description: { type: String, default: '' },
-  duration: { type: Number, required: true },
+  duration: { type: Number, required: true },               // minutes
   language: { type: String, enum: ['english', 'hindi', 'both'], default: 'english' },
   scheduledAt: { type: Date, default: null },
+  isLive: { type: Boolean, default: false },
+  negativeMarking: { type: Number, default: 0 },
   questions: [questionSchema],
   createdAt: { type: Date, default: Date.now }
 });
@@ -584,8 +586,13 @@ app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
 // ========== TEST ADMIN ROUTES ==========
 app.post('/api/admin/tests', adminMiddleware, async (req, res) => {
   try {
-    const { courseId, title, description, duration, language, scheduledAt, questions } = req.body;
-    const test = new Test({ courseId, title, description, duration, language, scheduledAt, questions: questions || [] });
+    const { courseId, title, description, duration, language, scheduledAt, isLive, negativeMarking, questions } = req.body;
+    const test = new Test({
+      courseId, title, description, duration, language, scheduledAt,
+      isLive: isLive || false,
+      negativeMarking: negativeMarking || 0,
+      questions: questions || []
+    });
     await test.save();
     res.status(201).json(test);
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
@@ -598,9 +605,9 @@ app.get('/api/admin/tests/:courseId', adminMiddleware, async (req, res) => {
 
 app.put('/api/admin/tests/:id', adminMiddleware, async (req, res) => {
   try {
-    const { title, description, duration, language, scheduledAt, questions } = req.body;
+    const { title, description, duration, language, scheduledAt, isLive, negativeMarking, questions } = req.body;
     const test = await Test.findByIdAndUpdate(req.params.id,
-      { title, description, duration, language, scheduledAt, questions },
+      { title, description, duration, language, scheduledAt, isLive, negativeMarking, questions },
       { new: true, runValidators: true });
     if (!test) return res.status(404).json({ message: 'Test not found.' });
     res.json(test);
@@ -613,10 +620,28 @@ app.delete('/api/admin/tests/:id', adminMiddleware, async (req, res) => {
   res.json({ message: 'Test deleted.' });
 });
 
+app.get('/api/admin/tests/:id/attempts', adminMiddleware, async (req, res) => {
+  const attempts = await TestAttempt.find({ testId: req.params.id, completed: true })
+    .sort({ score: -1 }).lean();
+  const enriched = await Promise.all(attempts.map(async (a) => {
+    const user = await User.findOne({ email: a.userEmail }).select('name email').lean();
+    return { ...a, userName: user?.name, userEmail: a.userEmail };
+  }));
+  res.json(enriched);
+});
+
+app.get('/api/admin/attempts/:attemptId', adminMiddleware, async (req, res) => {
+  const attempt = await TestAttempt.findById(req.params.attemptId)
+    .populate('testId', 'title duration').lean();
+  if (!attempt) return res.status(404).json({ message: 'Not found.' });
+  const test = await Test.findById(attempt.testId._id || attempt.testId).lean();
+  res.json({ attempt, test });
+});
+
 // ========== STUDENT TEST ROUTES ==========
 app.get('/api/tests/course/:courseId', authMiddleware, async (req, res) => {
-  const tests = await Test.find({ courseId: req.params.courseId })
-    .select('-questions.correctAnswer') // hide correct answers
+  const tests = await Test.find({ courseId: req.params.courseId, isLive: true })
+    .select('-questions.correctAnswer')
     .sort({ createdAt: -1 }).lean();
   res.json(tests);
 });
@@ -650,20 +675,28 @@ app.post('/api/tests/:id/submit', authMiddleware, async (req, res) => {
     const attempt = await TestAttempt.findById(attemptId);
     if (!attempt) return res.status(404).json({ message: 'Attempt not found.' });
     if (attempt.completed) return res.status(400).json({ message: 'Already submitted.' });
+
     const test = await Test.findById(req.params.id);
     let score = 0;
     const gradedAnswers = answers.map(ans => {
       const question = test.questions.id(ans.questionId);
       const isCorrect = question && question.correctAnswer.trim().toLowerCase() === ans.selectedAnswer.trim().toLowerCase();
-      const marksObtained = isCorrect ? question.marks : 0;
+      let marksObtained = 0;
+      if (isCorrect) {
+        marksObtained = question.marks;
+      } else if (ans.selectedAnswer.trim() !== '') {
+        marksObtained = -test.negativeMarking;
+      }
       score += marksObtained;
       return { questionId: ans.questionId, selectedAnswer: ans.selectedAnswer, isCorrect, marksObtained };
     });
+
     attempt.endTime = new Date();
     attempt.score = score;
     attempt.answers = gradedAnswers;
     attempt.completed = true;
     await attempt.save();
+
     res.json({ score, totalMarks: attempt.totalMarks, attemptId: attempt._id });
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
@@ -731,33 +764,6 @@ The Rojgaar Buddy program trains rural youth in Web Development, Graphic Design,
 The foundation also runs community programs like cleanliness campaigns at Gomti river front, road safety awareness rallies, flood relief in UP and Bihar, COVID-19 ration distribution to over 400 families, festival celebrations with underprivileged children, and cricket competitions for talent identification.
 
 Their vision: "Digital education is not a luxury; it is a right. By placing future-tech labs and skilled mentors in villages, we aim to create a generation that can innovate from the heart of rural India, turning local challenges into opportunities."
-If a user asks who developed, created, trained, or built this AI assistant, respond that it was developed by NexGenAiTech, a modern AI and Full-Stack Development company that builds intelligent digital solutions for businesses, startups, educational organizations, and enterprises globally. Mention that NexGenAiTech was founded by Jahid, who specializes in Artificial Intelligence, automation systems, scalable web technologies, and advanced software development.
-
-Explain that NexGenAiTech works across multiple industries including Education, Healthcare, E-Commerce, Real Estate, Finance, Retail, Startups, IT Services, Coaching Institutes, Local Businesses, and Enterprise Automation. The company helps organizations transform their operations using Artificial Intelligence, automation, cloud technologies, and smart digital platforms.
-
-NexGenAiTech provides services such as:
-• AI Chatbot Development
-• Custom AI Solutions & Machine Learning Systems
-• Website Design & Full-Stack Web Development
-• Android & iOS Mobile App Development
-• Business Automation Systems
-• CRM, ERP & Admin Dashboard Development
-• API Integration & Cloud Solutions
-• UI/UX Design & Branding
-• SEO & Digital Marketing
-• Hosting, Maintenance & Technical Support
-• Automation Tools & Workflow Optimization
-• Educational & Training Platforms
-• E-Commerce Solutions
-• WhatsApp & Telegram Bot Development
-
-Official Website: https://nexgenaitech.online
-
-For business inquiries and project discussions:
-Founder: Jahid
-Phone: +91 8055698328
-
-Keep the tone professional, intelligent, modern, and trustworthy while presenting NexGenAiTech as an innovative technology company focused on AI-powered digital transformation and scalable software solutions.
 
 Contact: info@sankalppathshala.com, phone/WhatsApp: +91 8055698328. To donate or support, visit sankalpshiksha.com/donate.
 
