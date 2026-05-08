@@ -1,32 +1,32 @@
 /* ============================================================
-   SANKALP DIGITAL PATHSHALA – ULTIMATE COMPLETE STYLESHEET
-   – Light black background (premium dark gray‑black)
-   – Perfectly centered course cards
-   – All previous fixes integrated
-   – ≈ 1500 lines of polished neon glassmorphism
+   SANKALP DIGITAL PATHSHALA – FINAL POLISHED NEON GLASSMORPHISM
+   – Forgot password input styled (global input rule)
+   – Doubt / lecture toggles (pure CSS)
+   – “Every Course Includes” premium pills
+   – Dashboard topbar flush & auto‑hide (JS helper included)
+   – Sidebar fixed, mobile responsive
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-/* ---------- GLOBAL SCALING (0.75× feel) ---------- */
+/* ---------- GLOBAL SCALING (0.75x feel) ---------- */
 html {
-  font-size: 12px;                     /* 1rem = 12px -> 75% of default 16px */
+  font-size: 12px;
 }
 
-/* ---------- CUSTOM PROPERTIES (lightened background) ---------- */
+/* ---------- CUSTOM PROPERTIES ---------- */
 :root {
-  --primary-bg: #0c0c14;               /* light black – softer than pure #000 */
-  --secondary-bg: #12121a;
+  --primary-bg: #06060a;
+  --secondary-bg: #0a0a0f;
   --neon-primary: #2d8eff;
   --neon-hover: #1a6dff;
   --neon-glow: #59b0ff;
-  --glass-surface: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-hover: rgba(255, 255, 255, 0.08);
+  --glass-surface: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.05);
   --text-primary: #ffffff;
   --text-secondary: rgba(255, 255, 255, 0.7);
   --text-muted: rgba(255, 255, 255, 0.45);
-  --surface: #16161e;
+  --surface: #0d0d14;
   --danger: #ff4d6a;
   --success: #00e676;
   --warning: #ffb74d;
@@ -194,7 +194,7 @@ img {
   left: 0;
   width: 100%;
   z-index: 1000;
-  background: rgba(12, 12, 20, 0.85);  /* light black with transparency */
+  background: rgba(6, 6, 10, 0.85);
   backdrop-filter: blur(30px);
   border-bottom: 1px solid var(--glass-border);
   padding: 0.4rem 0;
@@ -240,62 +240,16 @@ img {
 .hero-subtitle { font-size: 1rem; color: var(--text-secondary); margin-bottom: 1.8rem; max-width: 550px; margin-left: auto; margin-right: auto; }
 .hero-buttons { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
 
-/* ========== COURSE CARDS – centered content, proper spacing ========== */
+/* ========== COURSE CARDS ========== */
 .courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.2rem; }
-
-.course-card {
-  background: var(--glass-surface);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: var(--transition);
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-}
-
+.course-card { background: var(--glass-surface); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); overflow: hidden; transition: var(--transition); display: flex; flex-direction: column; box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
 .course-card:hover { transform: translateY(-5px); border-color: var(--neon-primary); box-shadow: var(--shadow-neon); }
 .course-card img { height: 120px; object-fit: cover; }
-
-.course-card-body {
-  padding: 1.2rem 1.5rem;               /* increased horizontal padding */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;                  /* center horizontally */
-  text-align: center;                   /* center text */
-}
-
-.course-card h3 {
-  font-family: var(--font-heading);
-  font-size: 1rem;
-  margin-bottom: 0.3rem;
-  color: var(--text-primary);
-}
-
-.course-card p {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-  flex: 1;
-}
-
-.price-container {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0.2rem 0;
-  justify-content: center;
-}
-
-.price {
-  font-size: 1.3rem;
-  font-weight: 800;
-  color: var(--neon-primary);
-  text-shadow: 0 0 5px rgba(45, 142, 255, 0.4);
-}
-
+.course-card-body { padding: 1rem 1.2rem; flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.course-card h3 { font-family: var(--font-heading); font-size: 1rem; margin-bottom: 0.3rem; color: var(--text-primary); }
+.course-card p { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; flex: 1; }
+.price-container { display: flex; align-items: center; gap: 0.4rem; margin: 0.2rem 0; justify-content: center; }
+.price { font-size: 1.3rem; font-weight: 800; color: var(--neon-primary); text-shadow: 0 0 5px rgba(45, 142, 255, 0.4); }
 .original-price { text-decoration: line-through; color: var(--text-muted); font-size: 0.8rem; opacity: 0.7; }
 .discount-badge { background: rgba(255, 183, 77, 0.15); color: var(--warning); padding: 0.15rem 0.6rem; border-radius: var(--radius-full); font-weight: 600; font-size: 0.75rem; }
 
@@ -322,10 +276,7 @@ img {
 .auth-title { font-family: var(--font-heading); text-align: center; font-size: 1.5rem; font-weight: 700; }
 .auth-subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 1.2rem; font-size: 0.9rem; }
 
-/* ========== FORMS – All inputs globally styled ========== */
-.form-group { margin-bottom: 1rem; }
-.form-group label { display: block; margin-bottom: 0.3rem; font-weight: 500; color: var(--text-secondary); font-size: 0.85rem; }
-
+/* ========== GLOBAL INPUT / TEXTAREA STYLE (includes forgot password fields) ========== */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -356,19 +307,44 @@ textarea:focus {
   box-shadow: 0 0 0 2px rgba(45, 142, 255, 0.15);
 }
 
-.form-error { color: var(--danger); font-size: 0.75rem; }
-.auth-switch { text-align: center; margin-top: 1rem; color: var(--text-secondary); font-size: 0.85rem; }
+/* ========== DOUBT / LONG TEXT – CSS READ MORE TOGGLE ========== */
+.doubt-toggle { display: none; }
+.doubt-toggle + .doubt-content { max-height: 3em; overflow: hidden; position: relative; }
+.doubt-toggle + .doubt-content::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1.5em;
+  background: linear-gradient(to bottom, transparent, var(--glass-surface));
+  pointer-events: none;
+}
+.doubt-toggle:checked + .doubt-content { max-height: none; }
+.doubt-toggle:checked + .doubt-content::after { display: none; }
+.doubt-toggle-label {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: var(--glass-hover);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  cursor: pointer;
+  color: var(--neon-primary);
+  margin-top: 0.5rem;
+  text-align: center;
+}
 
-/* ========== DASHBOARD LAYOUT (topbar flush & sidebar fixed) ========== */
+/* ========== DASHBOARD LAYOUT ========== */
 .dashboard-layout {
   display: flex;
   min-height: 100vh;
-  margin-top: 0;                     /* flush with viewport */
+  margin-top: 0;
 }
 
 .sidebar {
   width: 220px;
-  background: rgba(18, 18, 26, 0.8);
+  background: rgba(10, 10, 15, 0.8);
   backdrop-filter: blur(20px);
   border-right: 1px solid var(--glass-border);
   padding: 1rem 0.8rem;
@@ -408,7 +384,7 @@ textarea:focus {
 }
 
 .dashboard-topbar {
-  background: rgba(18, 18, 26, 0.9);
+  background: rgba(10, 10, 15, 0.8);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--glass-border);
   padding: 0.6rem 1rem;
@@ -432,111 +408,46 @@ textarea:focus {
 .compact-course-item { background: var(--glass-surface); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); padding: 0.7rem 1rem; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
 .compact-course-item:hover { border-color: var(--neon-primary); }
 
-.chapter-block { margin-bottom: 1.5rem; }
-.chapter-title { font-family: var(--font-heading); font-size: 1rem; color: var(--neon-primary); margin-bottom: 0.5rem; }
-.lecture-list-stacked { display: flex; flex-direction: column; gap: 0.5rem; }
-.lecture-card { background: var(--glass-surface); backdrop-filter: blur(8px); border: 1px solid var(--glass-border); padding: 0.7rem 1rem; border-radius: var(--radius); font-size: 0.85rem; }
-.lecture-card:hover { border-color: var(--neon-primary); }
-.lecture-info-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.3rem; }
-.lecture-actions-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-.complete-badge { background: rgba(0, 230, 118, 0.1); color: var(--success); padding: 0.1rem 0.4rem; border-radius: var(--radius-full); font-size: 0.75rem; }
+/* ========== LECTURE CARD – MOBILE TOGGLE (PURE CSS) ========== */
+.lecture-toggle { display: none; }
+.lecture-toggle-label {
+  display: none;               /* hidden on desktop */
+  font-size: 0.8rem;
+  color: var(--neon-primary);
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  background: var(--glass-hover);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+@media (max-width: 900px) {
+  .lecture-actions-row {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+  }
+  .lecture-toggle:checked + .lecture-card .lecture-actions-row {
+    max-height: 200px;
+  }
+  .lecture-toggle-label { display: block; }
+}
 
 /* ========== PROGRESS BAR ========== */
 .progress-bar { height: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; margin: 0.8rem 0; }
 .progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-primary), var(--neon-glow)); transition: width 0.8s ease; border-radius: 8px; }
 
-/* ========== DOUBTS – TRUNCATION WITH READ MORE (PURE CSS) ========== */
-.doubt-card {
-  background: var(--glass-surface);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
-  padding: 0.9rem;
-  border-radius: var(--radius);
-  margin-bottom: 0.8rem;
-  font-size: 0.88rem;
-  position: relative;
-}
+/* ========== DOUBTS ========== */
+.doubt-card { background: var(--glass-surface); backdrop-filter: blur(8px); border: 1px solid var(--glass-border); padding: 0.9rem; border-radius: var(--radius); margin-bottom: 0.8rem; font-size: 0.88rem; }
 .doubt-card:hover { border-color: var(--neon-primary); }
-
-.doubt-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-height: 3rem;
-  transition: max-height 0.4s ease;
-}
-
-.doubt-more-toggle { display: none; }
-
-.doubt-more-label {
-  display: inline-block;
-  font-size: 0.75rem;
-  color: var(--neon-primary);
-  cursor: pointer;
-  margin-top: 0.3rem;
-  font-weight: 600;
-}
-
-.doubt-more-toggle:checked + .doubt-text {
-  -webkit-line-clamp: unset;
-  max-height: 500px;
-  overflow: visible;
-}
-
-.doubt-more-toggle:checked ~ .doubt-more-label { display: none; }
-.doubt-card .doubt-more-label { display: inline-block; }
-
 .reply { color: var(--neon-primary); margin-left: 0.8rem; }
 .pending { color: var(--warning); }
 .replied-badge { background: rgba(0, 230, 118, 0.1); color: var(--success); padding: 0.1rem 0.4rem; border-radius: var(--radius-full); font-size: 0.75rem; }
 
-/* ========== MOBILE LECTURE CARDS – COLLAPSIBLE ========== */
-@media (max-width: 768px) {
-  .lecture-card {
-    max-height: 4.5rem;
-    overflow: hidden;
-    transition: max-height 0.4s ease;
-  }
-  .lecture-card:hover {
-    max-height: 200px;
-    border-color: var(--neon-primary);
-  }
-  .lecture-actions-row { opacity: 0; transition: opacity 0.2s; }
-  .lecture-card:hover .lecture-actions-row { opacity: 1; }
-}
-
-/* ========== "EVERY COURSE INCLUDES" PILLS ========== */
-.course-features-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.course-features-list span {
-  background: var(--glass-surface);
-  backdrop-filter: blur(8px);
-  border: 1px solid var(--glass-border);
-  padding: 0.3rem 0.9rem;
-  border-radius: var(--radius-full);
-  font-size: 0.8rem;
-  color: var(--neon-glow);
-  font-weight: 500;
-  transition: var(--transition);
-}
-
-.course-features-list span:hover {
-  background: rgba(45, 142, 255, 0.1);
-  border-color: var(--neon-primary);
-  color: #fff;
-  transform: translateY(-1px);
-}
-
 /* ========== ADMIN OVERLAY / MODAL ========== */
-.admin-login-overlay { position: fixed; inset: 0; background: rgba(12,12,20,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
-.modal-overlay { position: fixed; inset: 0; background: rgba(12,12,20,0.65); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.admin-login-overlay { position: fixed; inset: 0; background: rgba(6,6,10,0.75); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(6,6,10,0.65); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
 .modal-content { background: var(--surface); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); padding: 1.5rem; border-radius: var(--radius-xl); width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; }
 
 /* ========== TABLES ========== */
@@ -607,6 +518,25 @@ tr:hover { background: rgba(255,255,255,0.02); }
 .testimonial-avatar { width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, var(--neon-primary), var(--neon-hover)); display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 0.8rem; }
 .testimonial-author strong { display: block; font-size: 0.8rem; }
 .testimonial-author span { font-size: 0.7rem; color: var(--text-muted); }
+
+/* ========== "EVERY COURSE INCLUDES" PREMIUM PILLS ========== */
+.course-features-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 1rem 0;
+}
+.course-features-pills span {
+  background: rgba(45, 142, 255, 0.08);
+  border: 1px solid var(--glass-border);
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  color: var(--neon-primary);
+  font-weight: 500;
+  backdrop-filter: blur(8px);
+}
 
 /* ========== TEST & PRACTICE UI ========== */
 .test-panel { max-width: 950px; margin: 0 auto; }
