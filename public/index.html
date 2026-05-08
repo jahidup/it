@@ -3,21 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sankalp Digital Pathshala – Learn IT Skills & Transform Your Career</title>
-    <meta name="description" content="Master in-demand IT skills with Sankalp Digital Pathshala. Expert-led courses, hands-on projects, recognised certifications, and 95% placement success. Start learning today!">
+    <title>Sankalp Digital Pathshala – Master IT Skills & Transform Your Career</title>
+    <meta name="description" content="Learn in‑demand IT skills with expert‑led courses, hands‑on projects, AI‑powered learning, and 95% placement success. Join 12,500+ learners today!">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- ==================== NAVBAR (unchanged) ==================== -->
+    <!-- Navbar -->
     <nav class="navbar" id="navbar">
         <div class="nav-container">
-            <a href="index.html" class="nav-logo"><span class="logo-icon">🎓</span> Sankalp Digital Pathshala</a>
+            <a href="index.html" class="nav-logo"><span class="logo-icon">🎓</span> Sankalp<span> Digital</span></a>
             <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">☰</button>
             <ul class="nav-links" id="navLinks">
                 <li><a href="index.html" class="active">Home</a></li>
                 <li><a href="courses.html">Courses</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#testimonials">Reviews</a></li>
+                <li><a href="#faq">FAQ</a></li>
                 <li id="navLogin"><a href="login.html">Login</a></li>
-                <li id="navRegister"><a href="register.html">Register</a></li>
+                <li id="navRegister"><a href="register.html" class="btn-nav">Get Started</a></li>
                 <li id="navDashboard" style="display:none;"><a href="dashboard.html">Dashboard</a></li>
                 <li id="navAdmin" style="display:none;"><a href="admin.html">Admin</a></li>
                 <li id="navLogout" style="display:none;"><a href="#" onclick="handleLogout()">Logout</a></li>
@@ -25,180 +28,185 @@
         </div>
     </nav>
 
-    <!-- ==================== HERO ==================== -->
+    <!-- Hero Section -->
     <section class="hero-premium" id="hero">
         <div class="hero-bg-pattern"></div>
         <div class="hero-particles" id="heroParticles"></div>
         <div class="hero-content-wrapper">
-            <span class="hero-badge">🚀 Trusted by 10,000+ Learners Worldwide</span>
+            <span class="hero-badge">🚀 Trusted by 12,500+ Learners Worldwide</span>
             <h1 class="hero-title">Master <span class="highlight">IT Skills</span> & Launch Your Dream Career</h1>
-            <p class="hero-subtitle">
-                Join India's most affordable online IT learning platform. Learn from 50+ industry experts, build real‑world projects, earn recognised certifications, and get placed in top companies — all at your own pace.
-            </p>
+            <p class="hero-subtitle">Join India's most futuristic online learning platform. Experience AI‑powered learning, build real‑world projects, earn recognised certifications, and secure placements in top tech companies.</p>
             <div class="hero-buttons">
-                <a href="courses.html" class="btn btn-primary-premium btn-lg">📚 Explore Courses</a>
-                <a href="register.html" class="btn btn-outline-light-premium btn-lg">🎯 Start Free Trial</a>
+                <a href="courses.html" class="btn btn-primary btn-lg">📚 Explore Courses</a>
+                <a href="register.html" class="btn btn-outline btn-lg">🎯 Start Free Trial</a>
             </div>
         </div>
     </section>
 
-    <!-- ==================== FEATURED COURSES ==================== -->
-    <section class="section-premium" id="featuredCourses">
-        <div class="container-premium">
-            <div class="section-header reveal">
-                <span class="section-label">Top Programmes</span>
-                <h2 class="section-title">Featured Courses</h2>
-                <p class="section-subtitle">Handpicked programmes designed by industry veterans to give you job‑ready skills</p>
+    <!-- Featured Courses -->
+    <section class="section" id="featuredCourses">
+        <div class="container">
+            <h2 class="section-title">Featured Courses</h2>
+            <p class="section-subtitle">Handpicked programmes designed by industry veterans to give you job‑ready skills</p>
+            <div class="courses-grid" id="featuredCoursesGrid">
+                <div class="loading-shimmer"></div>
+                <div class="loading-shimmer"></div>
+                <div class="loading-shimmer"></div>
             </div>
-            <div class="courses-grid-premium reveal" id="featuredCoursesGrid">
-                <div class="loading-spinner">Loading courses...</div>
-            </div>
-            <div class="text-center reveal" style="margin-top:2.5rem;">
-                <a href="courses.html" class="btn btn-outline-premium btn-lg">View All 50+ Courses →</a>
+            <div class="text-center mt-3">
+                <a href="courses.html" class="btn btn-outline">View All 50+ Courses →</a>
             </div>
         </div>
     </section>
 
-    <!-- ==================== MILESTONES ==================== -->
-    <section class="section-premium milestones-premium" id="milestones">
-        <div class="container-premium">
-            <div class="section-header reveal">
-                <span class="section-label" style="background:rgba(255,255,255,0.1);color:#f59e0b;">Our Impact</span>
-                <h2 class="section-title" style="color:#fff;">Trusted by Thousands</h2>
-                <p class="section-subtitle" style="color:rgba(255,255,255,0.7);">Numbers that speak for our commitment to quality education</p>
-            </div>
-            <div class="milestones-grid reveal">
+    <!-- Milestones -->
+    <section class="milestones-premium" id="milestones">
+        <div class="container">
+            <h2 class="section-title" style="color:#fff;">Our Impact</h2>
+            <div class="milestones-grid">
                 <div class="milestone-card"><div class="milestone-icon">👨‍🎓</div><h3>12,500+</h3><p>Students Enrolled</p></div>
                 <div class="milestone-card"><div class="milestone-icon">🎬</div><h3>650+</h3><p>Video Lectures</p></div>
                 <div class="milestone-card"><div class="milestone-icon">💼</div><h3>95%</h3><p>Placement Success</p></div>
                 <div class="milestone-card"><div class="milestone-icon">👨‍🏫</div><h3>50+</h3><p>Industry Experts</p></div>
-                <div class="milestone-card"><div class="milestone-icon">🏢</div><h3>200+</h3><p>Hiring Partners</p></div>
             </div>
         </div>
     </section>
 
-    <!-- ==================== WHY CHOOSE US ==================== -->
-    <section class="section-premium section-alt-premium" id="about">
-        <div class="container-premium">
-            <div class="section-header reveal">
-                <span class="section-label">Why Sankalp</span>
-                <h2 class="section-title">Why Choose Us</h2>
-                <p class="section-subtitle">We don't just teach — we transform careers through a holistic learning experience</p>
-            </div>
-            <div class="features-grid-premium reveal">
-                <div class="feature-card"><span class="feature-icon">🎯</span><h3>Expert Instructors</h3><p>Learn from professionals at Google, Microsoft, Amazon and top startups. They bring real‑world insights that textbooks can't teach.</p></div>
-                <div class="feature-card"><span class="feature-icon">📚</span><h3>Practical Curriculum</h3><p>Every module includes hands‑on projects and portfolio‑building assignments. Graduate with 5+ industry‑grade projects.</p></div>
-                <div class="feature-card"><span class="feature-icon">🎓</span><h3>Recognised Certificates</h3><p>Earn blockchain‑verified certificates trusted by 200+ hiring partners. Stand out on LinkedIn and your resume.</p></div>
-                <div class="feature-card"><span class="feature-icon">💬</span><h3>Instant Doubt Resolution</h3><p>Post your query under any lecture and get answers within hours from mentors and a supportive community.</p></div>
-                <div class="feature-card"><span class="feature-icon">⏰</span><h3>Flexible Learning</h3><p>Access all content 24/7 on any device. Learn at your own pace with lifetime access and free content updates.</p></div>
-                <div class="feature-card"><span class="feature-icon">🚀</span><h3>Placement Support</h3><p>Get resume reviews, mock interviews, and direct referrals to 200+ hiring partners. Dedicated placement cell included.</p></div>
+    <!-- Why Choose Us -->
+    <section class="section" id="about">
+        <div class="container">
+            <h2 class="section-title">Why Choose Sankalp</h2>
+            <p class="section-subtitle">We blend cutting‑edge technology with human expertise to deliver an unmatched learning experience</p>
+            <div class="features-grid">
+                <div class="feature-card"><span class="feature-icon">🎯</span><h3>Expert Instructors</h3><p>Learn from professionals at Google, Microsoft, Amazon and top startups.</p></div>
+                <div class="feature-card"><span class="feature-icon">📚</span><h3>Practical Curriculum</h3><p>Hands‑on projects and portfolio‑building assignments.</p></div>
+                <div class="feature-card"><span class="feature-icon">🎓</span><h3>Recognised Certificates</h3><p>Blockchain‑verified credentials trusted by 200+ hiring partners.</p></div>
+                <div class="feature-card"><span class="feature-icon">💬</span><h3>AI‑Powered Doubts</h3><p>Instant AI‑generated explanations for every doubt.</p></div>
+                <div class="feature-card"><span class="feature-icon">⏰</span><h3>Flexible Learning</h3><p>24/7 access, lifetime validity, and free content updates.</p></div>
+                <div class="feature-card"><span class="feature-icon">🚀</span><h3>Placement Support</h3><p>Resume reviews, mock interviews, and direct referrals.</p></div>
             </div>
         </div>
     </section>
 
-    <!-- ==================== TESTIMONIALS ==================== -->
-    <section class="section-premium" id="testimonials">
-        <div class="container-premium">
-            <div class="section-header reveal">
-                <span class="section-label">Student Love</span>
-                <h2 class="section-title">What Our Students Say</h2>
-                <p class="section-subtitle">Real stories from real learners who transformed their careers with us</p>
-            </div>
-            <div class="testimonials-grid reveal">
-                <div class="testimonial-card"><span class="quote-icon">❝</span><p class="testimonial-text">"I was a complete beginner in web development. Within 6 months on Sankalp Digital Pathshala, I built 4 full‑stack projects and landed a job at a Bangalore startup with a 120% salary hike."</p><div class="testimonial-author"><div class="testimonial-avatar">RS</div><div><strong>Rahul Sharma</strong><span>Frontend Developer, Bangalore</span></div></div></div>
-                <div class="testimonial-card"><span class="quote-icon">❝</span><p class="testimonial-text">"The Python & Data Science course gave me everything I needed to switch from a non‑tech background into data analytics. The instructors are incredibly supportive."</p><div class="testimonial-author"><div class="testimonial-avatar">PM</div><div><strong>Priya Mehta</strong><span>Data Analyst, Mumbai</span></div></div></div>
-                <div class="testimonial-card"><span class="quote-icon">❝</span><p class="testimonial-text">"The certificate I earned here was the key differentiator on my LinkedIn profile. Recruiters from 5 different companies reached out within a month."</p><div class="testimonial-author"><div class="testimonial-avatar">AK</div><div><strong>Amit Kumar</strong><span>DevOps Engineer, Pune</span></div></div></div>
+    <!-- Testimonials -->
+    <section class="section" id="testimonials">
+        <div class="container">
+            <h2 class="section-title">What Our Students Say</h2>
+            <p class="section-subtitle">Real stories from learners who transformed their careers</p>
+            <div class="testimonials-grid">
+                <div class="testimonial-card"><span class="quote-icon">❝</span><p class="testimonial-text">"I landed a job at a Bangalore startup with a 120% salary hike after completing the web development course. The doubt‑resolution system is a game‑changer!"</p><div class="testimonial-author"><div class="testimonial-avatar">RS</div><div><strong>Rahul Sharma</strong><span>Frontend Developer, Bangalore</span></div></div></div>
+                <div class="testimonial-card"><span class="quote-icon">❝</span><p class="testimonial-text">"The Python & Data Science course helped me switch from a non‑tech background to a data analyst role. The instructors are incredibly supportive."</p><div class="testimonial-author"><div class="testimonial-avatar">PM</div><div><strong>Priya Mehta</strong><span>Data Analyst, Mumbai</span></div></div></div>
+                <div class="testimonial-card"><span class="quote-icon">❝</span><p class="testimonial-text">"The blockchain certificate I earned here got me noticed by recruiters from 5 different companies within a month!"</p><div class="testimonial-author"><div class="testimonial-avatar">AK</div><div><strong>Amit Kumar</strong><span>DevOps Engineer, Pune</span></div></div></div>
             </div>
         </div>
     </section>
 
-    <!-- ==================== FAQ ==================== -->
-    <section class="section-premium section-alt-premium" id="faq">
-        <div class="container-premium">
-            <div class="section-header reveal">
-                <span class="section-label">Got Questions?</span>
-                <h2 class="section-title">Frequently Asked Questions</h2>
-                <p class="section-subtitle">Everything you need to know before starting your learning journey</p>
-            </div>
-            <div class="faq-list reveal">
-                <div class="faq-item active"><button class="faq-question">What courses do you offer? <span class="faq-icon">+</span></button><div class="faq-answer"><p>We offer 50+ courses across Web Development, Data Science, Python, Java, Cloud Computing (AWS/Azure), Cybersecurity, UI/UX Design, Digital Marketing, and more.</p></div></div>
-                <div class="faq-item"><button class="faq-question">Are the certificates industry-recognised? <span class="faq-icon">+</span></button><div class="faq-answer"><p>Absolutely! Our certificates are blockchain-verified and recognised by 200+ hiring partners.</p></div></div>
-                <div class="faq-item"><button class="faq-question">What is the course duration? <span class="faq-icon">+</span></button><div class="faq-answer"><p>Most courses range from 8 to 24 weeks with lifetime access to all course materials.</p></div></div>
-                <div class="faq-item"><button class="faq-question">Do you provide placement assistance? <span class="faq-icon">+</span></button><div class="faq-answer"><p>Yes! Resume building, mock interviews, soft skills training, and direct referrals to 200+ hiring partners.</p></div></div>
-                <div class="faq-item"><button class="faq-question">Is there a refund policy? <span class="faq-icon">+</span></button><div class="faq-answer"><p>We offer a 7‑day no‑questions‑asked refund policy.</p></div></div>
+    <!-- FAQ -->
+    <section class="section" id="faq">
+        <div class="container">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            <div class="faq-list">
+                <div class="faq-item active"><button class="faq-question">What courses do you offer? <span class="faq-icon">+</span></button><div class="faq-answer"><p>We offer 50+ courses across Web Development, Data Science, Cloud, Cybersecurity, UI/UX, and more. Each course is updated with the latest industry trends.</p></div></div>
+                <div class="faq-item"><button class="faq-question">Are the certificates industry‑recognised? <span class="faq-icon">+</span></button><div class="faq-answer"><p>Absolutely! Our certificates are blockchain‑verified and trusted by 200+ hiring partners.</p></div></div>
+                <div class="faq-item"><button class="faq-question">What about placement assistance? <span class="faq-icon">+</span></button><div class="faq-answer"><p>We provide resume building, mock interviews, soft skills training, and direct referrals to hiring partners. 95% of our job‑seeking students get placed within 3 months.</p></div></div>
+                <div class="faq-item"><button class="faq-question">Is there a refund policy? <span class="faq-icon">+</span></button><div class="faq-answer"><p>Yes, we offer a 7‑day no‑questions‑asked refund policy.</p></div></div>
             </div>
         </div>
     </section>
 
-    <!-- ==================== NEWSLETTER ==================== -->
-    <section class="section-premium">
-        <div class="container-premium">
-            <div class="newsletter-premium reveal">
-                <span class="section-label">Stay Updated</span>
+    <!-- Newsletter -->
+    <section class="section">
+        <div class="container">
+            <div class="newsletter-premium">
                 <h2 class="section-title">Join Our Learning Community</h2>
-                <p style="color:#6b7280;margin-bottom:0.5rem;">Get exclusive course discounts, free workshops, and career tips delivered to your inbox weekly.</p>
+                <p style="color:var(--text-secondary);">Get exclusive course discounts, free workshops, and career tips delivered weekly.</p>
                 <form class="newsletter-form" id="newsletterForm">
                     <input type="email" class="newsletter-input" placeholder="Enter your email address" required>
-                    <button type="submit" class="btn btn-primary-premium">Subscribe Free 📧</button>
+                    <button type="submit" class="btn btn-primary">Subscribe Free 📧</button>
                 </form>
             </div>
         </div>
     </section>
 
-    <!-- ==================== FOOTER (unchanged) ==================== -->
+    <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="footer-content">
-                <div class="footer-brand"><h3>🎓 Sankalp Digital Pathshala</h3><p>Empowering learners with quality IT education.</p></div>
-                <div class="footer-links"><h4>Quick Links</h4><ul><li><a href="index.html">Home</a></li><li><a href="courses.html">Courses</a></li><li><a href="login.html">Login</a></li><li><a href="register.html">Register</a></li></ul></div>
-                <div class="footer-contact"><h4>Contact Us</h4><p>📧 info@sankalppathshala.com</p><p>📞 +91 8055698328</p></div>
+            <div class="footer-grid">
+                <div>
+                    <h3>🎓 Sankalp Digital Pathshala</h3>
+                    <p>Transforming careers through affordable, high‑quality IT education. Learn from 50+ industry experts and land your dream job.</p>
+                    <div class="footer-social">
+                        <a href="#" aria-label="Facebook">📘</a>
+                        <a href="#" aria-label="Instagram">📷</a>
+                        <a href="#" aria-label="Twitter">🐦</a>
+                        <a href="#" aria-label="LinkedIn">💼</a>
+                    </div>
+                </div>
+                <div>
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Home</a></li>
+                        <li><a href="courses.html">All Courses</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#testimonials">Student Reviews</a></li>
+                        <li><a href="#faq">FAQ</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Popular Courses</h4>
+                    <ul>
+                        <li><a href="#">Full Stack Web Development</a></li>
+                        <li><a href="#">Python for Data Science</a></li>
+                        <li><a href="#">Cloud Computing (AWS)</a></li>
+                        <li><a href="#">Cybersecurity Essentials</a></li>
+                        <li><a href="#">UI/UX Design Mastery</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Contact Us</h4>
+                    <p>📧 info@sankalppathshala.com</p>
+                    <p>📞 +91 8055698328</p>
+                    <p>📍 Kushinagar, Uttar Pradesh</p>
+                </div>
             </div>
-            <div class="footer-bottom"><p>&copy; 2026 Sankalp Digital Pathshala. All rights reserved.</p></div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Sankalp Digital Pathshala. Crafted with ❤️ | <a href="#" style="color:inherit;">Privacy Policy</a> | <a href="#" style="color:inherit;">Terms of Service</a></p>
+            </div>
         </div>
     </footer>
 
     <div class="toast-container" id="toastContainer"></div>
     <script src="assets/js/app.js"></script>
     <script>
-        // Hero particles and FAQ accordion
+        // Hero particles
         (function() {
-            const particlesContainer = document.getElementById('heroParticles');
-            for (let i = 0; i < 35; i++) {
-                const particle = document.createElement('div');
-                particle.classList.add('hero-particle');
-                particle.style.left = Math.random() * 100 + '%';
-                particle.style.top = Math.random() * 100 + '%';
-                particle.style.animationDelay = Math.random() * 6 + 's';
-                particle.style.animationDuration = (4 + Math.random() * 8) + 's';
-                particle.style.width = (2 + Math.random() * 5) + 'px';
-                particle.style.height = particle.style.width;
-                particlesContainer.appendChild(particle);
+            const pc = document.getElementById('heroParticles');
+            for (let i=0;i<30;i++) {
+                const p = document.createElement('div');
+                p.className='hero-particle';
+                p.style.left=Math.random()*100+'%';
+                p.style.top=Math.random()*100+'%';
+                p.style.animationDelay=Math.random()*6+'s';
+                p.style.animationDuration=(4+Math.random()*8)+'s';
+                pc.appendChild(p);
             }
-
-            document.querySelectorAll('.faq-item').forEach(item => {
-                item.querySelector('.faq-question').addEventListener('click', () => {
-                    const isActive = item.classList.contains('active');
-                    document.querySelectorAll('.faq-item').forEach(fi => fi.classList.remove('active'));
-                    if (!isActive) item.classList.add('active');
+            // FAQ accordion
+            document.querySelectorAll('.faq-question').forEach(q => {
+                q.addEventListener('click', () => {
+                    const item = q.parentElement;
+                    const is = item.classList.contains('active');
+                    document.querySelectorAll('.faq-item').forEach(i=>i.classList.remove('active'));
+                    if(!is) item.classList.add('active');
                 });
             });
-
-            const revealEls = document.querySelectorAll('.reveal');
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.15 });
-            revealEls.forEach(el => observer.observe(el));
-
+            // Newsletter
             document.getElementById('newsletterForm').addEventListener('submit', function(e) {
                 e.preventDefault();
-                const email = this.querySelector('input').value.trim();
-                if (email && email.includes('@')) { showToast('🎉 Subscribed!', 'success'); this.reset(); }
-                else { showToast('Please enter a valid email.', 'error'); }
+                const email = this.querySelector('input').value;
+                if(email && email.includes('@')) {
+                    showToast('🎉 Subscribed!', 'success');
+                    this.reset();
+                } else showToast('Invalid email', 'error');
             });
         })();
     </script>
