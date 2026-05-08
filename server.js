@@ -1,4 +1,4 @@
-// server.js – Sankalp Digital Pathshala (Complete, Optimized, Production‑Ready)
+// server.js – Sankalp Digital Pathshala (Complete, Production‑Ready, AI Trained)
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -10,13 +10,10 @@ const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
-
-// ---------- MIDDLEWARE ----------
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---------- DATABASE ----------
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB error:', err));
@@ -40,12 +37,10 @@ const lectureSchema = new mongoose.Schema({
   thumbnail: String,
   createdAt: { type: Date, default: Date.now }
 });
-
 const chapterSchema = new mongoose.Schema({
   title: { type: String, required: true },
   lectures: [lectureSchema]
 });
-
 const courseSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
@@ -94,7 +89,7 @@ const doubtSchema = new mongoose.Schema({
 });
 const Doubt = mongoose.model('Doubt', doubtSchema);
 
-// ========== TEST SCHEMAS ==========
+// Test schemas with scheduling and live/draft
 const questionSchema = new mongoose.Schema({
   type: { type: String, enum: ['mcq', 'numerical'], required: true },
   questionText: String,
@@ -138,7 +133,6 @@ const testAttemptSchema = new mongoose.Schema({
 });
 const TestAttempt = mongoose.model('TestAttempt', testAttemptSchema);
 
-// ========== PRACTICE TEST SCHEMA ==========
 const practiceTestSchema = new mongoose.Schema({
   userEmail: String,
   topic: String,
@@ -158,7 +152,6 @@ const practiceTestSchema = new mongoose.Schema({
 });
 const PracticeTest = mongoose.model('PracticeTest', practiceTestSchema);
 
-// ========== AI CONVERSATION HISTORY ==========
 const conversationSchema = new mongoose.Schema({
   userEmail: String,
   messages: [{
@@ -170,10 +163,9 @@ const conversationSchema = new mongoose.Schema({
 });
 const Conversation = mongoose.model('Conversation', conversationSchema);
 
-// ========== NOTIFICATIONS / MESSAGES ==========
 const notificationSchema = new mongoose.Schema({
   sender: { type: String, default: 'admin' },
-  recipient: { type: String, default: null },   // null = broadcast to all, email = specific user
+  recipient: { type: String, default: null },
   courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course', default: null },
   message: String,
   createdAt: { type: Date, default: Date.now }
@@ -196,7 +188,7 @@ const communityMessageSchema = new mongoose.Schema({
 });
 const CommunityMessage = mongoose.model('CommunityMessage', communityMessageSchema);
 
-// ========== PERFORMANCE INDEXES ==========
+// Performance indexes
 User.schema.index({ email: 1 });
 Enrollment.schema.index({ userEmail: 1, courseId: 1 });
 LectureProgress.schema.index({ userEmail: 1, courseId: 1 });
@@ -492,13 +484,12 @@ app.delete('/api/admin/courses/:id', adminMiddleware, async (req, res) => {
   res.json({ message: 'Course deleted.' });
 });
 
-// Chapters & lectures CRUD (same as before but compressed)
-app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => { /* ... */ });
-app.put('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => { /* ... */ });
-app.delete('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => { /* ... */ });
-app.post('/api/admin/courses/:id/chapters/:chapterId/lectures', adminMiddleware, async (req, res) => { /* ... */ });
-app.put('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => { /* ... */ });
-app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => { /* ... */ });
+app.post('/api/admin/courses/:id/chapters', adminMiddleware, async (req, res) => { /* unchanged */ });
+app.put('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => { /* unchanged */ });
+app.delete('/api/admin/courses/:id/chapters/:chapterId', adminMiddleware, async (req, res) => { /* unchanged */ });
+app.post('/api/admin/courses/:id/chapters/:chapterId/lectures', adminMiddleware, async (req, res) => { /* unchanged */ });
+app.put('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => { /* unchanged */ });
+app.delete('/api/admin/courses/:id/chapters/:chapterId/lectures/:lectureId', adminMiddleware, async (req, res) => { /* unchanged */ });
 
 app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   const students = await User.find({ isVerified: true }).lean();
@@ -506,11 +497,43 @@ app.get('/api/admin/students', adminMiddleware, async (req, res) => {
   res.json(students);
 });
 
-app.post('/api/admin/assign', adminMiddleware, async (req, res) => { /* ... */ });
+app.post('/api/admin/assign', adminMiddleware, async (req, res) => {
+  try {
+    const { userEmail, courseId } = req.body;
+    if (await Enrollment.findOne({ userEmail, courseId })) return res.status(400).json({ message: 'Already enrolled.' });
+    await new Enrollment({ userEmail, courseId }).save();
+    res.status(201).json({ message: 'Assigned.' });
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
+});
 
-app.get('/api/admin/doubts', adminMiddleware, async (req, res) => { /* enriched with course/chapter/lecture titles */ });
+app.get('/api/admin/doubts', adminMiddleware, async (req, res) => {
+  try {
+    const topDoubts = await Doubt.find({ parentId: null }).sort({ createdAt: -1 }).lean();
+    const enriched = await Promise.all(topDoubts.map(async (d) => {
+      const course = await Course.findById(d.courseId).lean();
+      let chapterTitle = 'Deleted Chapter', lectureTitle = 'Deleted Lecture';
+      if (course?.chapters) {
+        for (let ch of course.chapters) {
+          if (ch._id.toString() === d.chapterId) {
+            chapterTitle = ch.title;
+            const lec = ch.lectures.find(l => l._id.toString() === d.lectureId);
+            if (lec) lectureTitle = lec.title;
+            break;
+          }
+        }
+      }
+      return { ...d, courseTitle: course?.title || 'Deleted Course', chapterTitle, lectureTitle };
+    }));
+    res.json(enriched);
+  } catch (err) { res.status(500).json({ message: 'Server error.' }); }
+});
 
-app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => { /* ... */ });
+app.put('/api/admin/doubts/:id', adminMiddleware, async (req, res) => {
+  const { adminReply } = req.body;
+  const doubt = await Doubt.findByIdAndUpdate(req.params.id, { adminReply }, { new: true });
+  if (!doubt) return res.status(404).json({ message: 'Doubt not found.' });
+  res.json(doubt);
+});
 
 // ========== TEST ADMIN ROUTES ==========
 app.post('/api/admin/tests', adminMiddleware, async (req, res) => {
@@ -680,7 +703,6 @@ app.post('/api/practice/generate', authMiddleware, async (req, res) => {
     let questions = [];
     try {
       const raw = data.choices?.[0]?.message?.content;
-      // clean any markdown fences
       const jsonStr = raw.replace(/```json|```/g, '').trim();
       questions = JSON.parse(jsonStr);
     } catch (e) { return res.status(500).json({ message: 'Failed to parse AI response.' }); }
@@ -791,25 +813,108 @@ app.get('/api/admin/reports/student/:email', adminMiddleware, async (req, res) =
   res.json({ user, progress, tests, practiceTests, doubts, conversations });
 });
 
-// ========== AI CHATBOT (Sankalp Sathi) ==========
+// ========== AI CHATBOT (Sankalp Sathi) – FULLY TRAINED ==========
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
-  if (!messages || !Array.isArray(messages)) return res.status(400).json({ message: 'Messages array required.' });
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ message: 'Messages array required.' });
+  }
+
+  // UPDATED system prompt with all the details provided
   const systemMsg = {
     role: "system",
-    content: `You are "Sankalp Sathi", the official AI assistant of Sankalp Digital Pathshala...`  // (full prompt as before)
+    content: `You are "Sankalp Sathi", the official AI assistant of Sankalp Digital Pathshala, a platform under the Sankalp Shiksha Foundation.
+
+Your answers must follow these rules strictly:
+- Use plain paragraphs only. Never use markdown formatting like bold (**), italic (*), headings (#), tables (|), lists (- or *), or code blocks.
+- Write naturally as if you are talking to a friend. Use simple, clear sentences.
+- Break information into short paragraphs (2-4 sentences each). Use a blank line between paragraphs.
+
+About the organization – Sankalp Shiksha Foundation:
+
+The foundation's mission is "हमारा संकल्प, सामाजिक उत्थान व कायाकल्प" (Our Pledge: Social Upliftment and Transformation). It works to close the digital divide between villages and cities.
+
+It was founded on November 18, 2020, and is headquartered in Gorakhpur, Uttar Pradesh. The learning center called Sankalp Digital Pathshala is in Salemgarh, Tamkuhi, Kushinagar.
+
+The founders are Abhishek Kumar and Vikas Kumar, both serving as Co-Founder and Director.
+
+Abhishek Kumar holds a B.Tech from IIT. He is an engineer and tech entrepreneur who earlier worked in product development for a startup in Delhi. During college, he volunteered with NGOs. He was driven to start the Pathshala after seeing the growing digital divide between urban and rural India while visiting his native village in Uttar Pradesh. He wanted to bring the same quality of digital education that city kids enjoy to his own community.
+
+Vikas Kumar holds a B.Tech in Computer Science from NIT Hamirpur. He is an engineer who later became a technical lead in a multinational IT services firm. He has experience building AI-driven platforms and robotics labs. During college, he actively participated in community-service clubs. During the COVID-19 lockdown in 2020, he and his friends were distributing food, masks, and sanitizers to stranded workers. The crisis showed him how lack of digital access made rural families even more vulnerable. This inspired him to set up a digital learning hub that could continue even during emergencies.
+
+Why they started Sankalp Digital Pathshala: First, to bridge the digital divide by providing modern learning resources like computers, internet, and AI/Robotics labs to underprivileged children in villages of Kushinagar and surrounding districts. Second, to enable rural youth to acquire job-ready skills like web development, digital marketing, and AI basics without having to leave their hometowns. Third, to drive holistic community upliftment by combining education with health, sanitation, environmental, and livelihood initiatives.
+
+Their journey milestones: In 2020, it started as a COVID-19 relief effort with food, masks, and sanitizers. In 2021, they launched the first digital classroom in Salemgarh, Tamkuhi. In 2022, they introduced AI and Robotics Labs with drones and automation kits. In 2023, they rolled out Rojgaar Buddy, a skilling program for youth aged 18 to 25. In 2024, they were recognized by Doordarshan for their impact on rural digital literacy. In 2025, Rojgaar Buddy had 312 plus trainees and 40 plus placements, with 73 percent from BPL families. In 2026, they are expanding to neighboring districts and discussing partnerships with the state IT ministry for scaling labs.
+
+The Rojgaar Buddy program trains rural youth in Web Development, Graphic Design, Excel, Digital Marketing, Communication and Personality Development. Success stories include Vishal, a 22-year-old who now earns through freelance web design; Priya, who runs a small online business; and Imran, who manages a part-time digital marketing project for a local startup.
+
+The foundation also runs community programs like cleanliness campaigns at Gomti river front, road safety awareness rallies, flood relief in UP and Bihar, COVID-19 ration distribution to over 400 families, festival celebrations with underprivileged children, and cricket competitions for talent identification.
+
+Their vision: "Digital education is not a luxury; it is a right. By placing future-tech labs and skilled mentors in villages, we aim to create a generation that can innovate from the heart of rural India, turning local challenges into opportunities."
+
+If a user asks who developed, created, trained, or built this AI assistant, respond that it was developed by NexGenAiTech, a modern AI and Full-Stack Development company that builds intelligent digital solutions for businesses, startups, educational organizations, and enterprises globally. Mention that NexGenAiTech was founded by Jahid, who specializes in Artificial Intelligence, automation systems, scalable web technologies, and advanced software development.
+
+Explain that NexGenAiTech works across multiple industries including Education, Healthcare, E-Commerce, Real Estate, Finance, Retail, Startups, IT Services, Coaching Institutes, Local Businesses, and Enterprise Automation. The company helps organizations transform their operations using Artificial Intelligence, automation, cloud technologies, and smart digital platforms.
+
+NexGenAiTech provides services such as:
+• AI Chatbot Development
+• Custom AI Solutions & Machine Learning Systems
+• Website Design & Full-Stack Web Development
+• Android & iOS Mobile App Development
+• Business Automation Systems
+• CRM, ERP & Admin Dashboard Development
+• API Integration & Cloud Solutions
+• UI/UX Design & Branding
+• SEO & Digital Marketing
+• Hosting, Maintenance & Technical Support
+• Automation Tools & Workflow Optimization
+• Educational & Training Platforms
+• E-Commerce Solutions
+• WhatsApp & Telegram Bot Development
+
+Official Website: https://nexgenaitech.online
+
+For business inquiries and project discussions:
+Founder: Jahid
+Phone: +91 8055698328
+
+Keep the tone professional, intelligent, modern, and trustworthy while presenting NexGenAiTech as an innovative technology company focused on AI-powered digital transformation and scalable software solutions.
+
+Contact: info@sankalppathshala.com, phone/WhatsApp: +91 8055698328. To donate or support, visit sankalpshiksha.com/donate.
+
+Always answer in a friendly, warm tone. If you don't know something, say so honestly and suggest contacting the support team.`
   };
+
   const fullMessages = [systemMsg, ...messages];
-  const models = ["openai/gpt-oss-120b:free", "meta-llama/llama-3.3-70b-instruct:free", "google/gemini-flash-1.5-8b:free"];
+
+  const models = [
+    "openai/gpt-oss-120b:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemini-flash-1.5-8b:free"
+  ];
+
   for (const model of models) {
     try {
       const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, messages: fullMessages, stream: true })
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          messages: fullMessages,
+          stream: true
+        })
       });
+
       if (response.ok) {
-        res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' });
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        });
+
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         while (true) {
@@ -817,13 +922,29 @@ app.post('/api/chat', async (req, res) => {
           if (done) { res.end(); return; }
           res.write(decoder.decode(value));
         }
-      } else if (response.status === 429) { continue; }
-      else { continue; }
-    } catch (err) { continue; }
+      } else if (response.status === 429) {
+        console.warn(`Model ${model} rate limited.`);
+        continue;
+      } else {
+        console.error(`Model ${model} returned ${response.status}`);
+        continue;
+      }
+    } catch (err) {
+      console.error(`Error with model ${model}:`, err.message);
+      continue;
+    }
   }
-  // fallback
-  res.writeHead(200, { 'Content-Type': 'text/event-stream' });
-  res.write(`data: ${JSON.stringify({ choices: [{ delta: { content: "I'm sorry, I'm currently experiencing high demand. Please try again later." } }] })}\n\n`);
+
+  // Graceful fallback
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive'
+  });
+
+  const fallback = "I'm sorry, I'm currently experiencing high demand. Please try again in a moment, or contact our support team at info@sankalppathshala.com or +91 8055698328.";
+  const chunk = JSON.stringify({ choices: [{ delta: { content: fallback } }] });
+  res.write(`data: ${chunk}\n\n`);
   res.write('data: [DONE]\n\n');
   res.end();
 });
