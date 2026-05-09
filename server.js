@@ -1,4 +1,4 @@
-// server.js – Sankalp Digital Pathshala (Complete, Production‑Ready, AI Trained)
+// server.js – Sankalp Digital Pathshala (Complete, Updated, All Features)
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
@@ -259,7 +259,10 @@ app.post('/api/auth/verify-otp', async (req, res) => {
     const record = await OTP.findOne({ email, otp, purpose: 'registration' });
     if (!record) return res.status(400).json({ message: 'Invalid OTP.' });
     if (record.verified) return res.status(400).json({ message: 'OTP already used.' });
-    if (new Date() > record.expiresAt) { await OTP.deleteMany({ email, purpose: 'registration' }); return res.status(400).json({ message: 'OTP expired.' }); }
+    if (new Date() > record.expiresAt) {
+      await OTP.deleteMany({ email, purpose: 'registration' });
+      return res.status(400).json({ message: 'OTP expired.' });
+    }
     record.verified = true; await record.save();
     res.json({ message: 'OTP verified.' });
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
@@ -363,7 +366,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
   } catch (err) { res.status(500).json({ message: 'Server error.' }); }
 });
 
-// ========== COURSE ROUTES (order matters) ==========
+// ========== COURSE ROUTES ==========
 app.get('/api/courses', async (req, res) => {
   const courses = await Course.find().sort({ createdAt: -1 }).lean();
   res.json(courses);
@@ -389,7 +392,7 @@ app.get('/api/courses/:id', async (req, res) => {
   res.json(course);
 });
 
-// ========== PROGRESS ROUTES ==========
+// ========== PROGRESS ROUTES (specific before parameterized) ==========
 app.get('/api/progress/my-report', authMiddleware, async (req, res) => {
   try {
     const completions = await LectureProgress.find({ userEmail: req.user.email })
@@ -820,7 +823,6 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ message: 'Messages array required.' });
   }
 
-  // UPDATED system prompt with all the details provided
   const systemMsg = {
     role: "system",
     content: `You are "Sankalp Sathi", the official AI assistant of Sankalp Digital Pathshala, a platform under the Sankalp Shiksha Foundation.
